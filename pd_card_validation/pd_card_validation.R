@@ -4,26 +4,40 @@
 # Place tar.gz file in project at "/renv/cellar/KAscore_1.0.0.tar.gz"
 
 # Install {KAscore} from the "cellar"
-renv::install("KAscore@1.0.0")
+# renv::install(
+#   packages = "KAscore@1.0.0",
+#   dependencies = c("Depends", "Imports", "LinkingTo", "Suggests")
+# )
+
+# There is a current bug with {KAscore} that requires you to install 
+# {rstudioapi} and {crayon}
+# install.packages(c("rstudioapi", "crayon"))
 
 dplyr::glimpse(KAscore::loans)
 
 df <- KAscore::loans
 
-KAscore::woe(
-  data = df,
-  outcome = default_status,
-  predictors = -c(loan_id, default_status)
-)
-
+# Make sure to reverse the factor levels of the dependent variable
+# See ?
 df$default_status <- factor(
   df$default_status, 
   levels = c("good", "bad")
 )
 
-# Bin the 'loan_amount' variable
-KAscore::bin_quantile(df$loan_amount) |> levels()
+# Calculate Weight-of-Evidence (for categorical variables)
+KAscore::woe(
+  data = df,
+  outcome = default_status,
+  predictors = dplyr::where(is.factor)
+)
 
+# Bin the 'loan_amount' variable by quantile & view breaks
+KAscore::bin_quantile(
+  df$loan_amount, 
+  n_bins = 5
+) |> levels()
+
+# Create a list of 4 different "breaks" scenarios
 breaks <- list(
   `c(-Inf, 13000, 23000, 39000, Inf)` = c(-Inf, 13000, 23000, 39000, Inf),
   `c(-Inf, 13500, 23500, 39500, Inf)` = c(-Inf, 13500, 23500, 39500, Inf),
@@ -31,7 +45,8 @@ breaks <- list(
   bin_quantile = c(-Inf ,13655, 23195, 39722, Inf)
 )
 
-
+# Define a function to calculate the information value statistic that we can map
+# over the list of breaks
 map_iv <- function(data, breaks, outcome, predictor) {
   
   df <- data |> 
@@ -51,6 +66,8 @@ map_iv <- function(data, breaks, outcome, predictor) {
 
 # install.packages("ggplot2")
 
+# Plot the Information Value statistic for "LoanAmount" across the different 
+# binning scenarios
 purrr::map(
   .x = breaks, 
   .f = function(x) map_iv(
@@ -67,8 +84,7 @@ purrr::map(
   ggplot2::ggplot(
     ggplot2::aes(
       x = reorder(breaks, iv),
-      y = iv 
-      # fill = label
+      y = iv
     )
   ) + 
   ggplot2::geom_col(width = 0.6, fill = "gray70") +
@@ -85,4 +101,7 @@ purrr::map(
     nudge_x = 0
   ) +
   ggplot2::scale_y_continuous(limits = c(NA, 0.20)) +
-  ggplot2::theme_minimal()
+  ggplot2::theme_minimal() + 
+  ggplot2::theme(
+    panel.grid.major.y = ggplot2::element_blank()
+  )

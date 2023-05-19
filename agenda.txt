@@ -1,0 +1,9 @@
+Agenda:
+* Brief introduction to {KAscore}
+  + Our commitment to developing R packages as a strategic initiative for the FCS
+* “Community Call” objectives & frequency
+* Current functionality
+* Short-term enhancements planned
+* Long-term roadmap
+* User Feedback
+* Additional Q&A

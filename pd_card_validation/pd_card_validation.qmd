@@ -1,0 +1,52 @@
+---
+title: "PD Card Validation"
+author: "Ketchbrook Analytics"
+format: html
+execute:
+  echo: false
+
+---
+
+## Background
+
+There are a couple of *different* ways that you would want to go about validating a traditional PD Model specified like the following one:
+
+**Current Ratio**
+```{r}
+tibble::tribble(
+  ~Bin, ~Rating,
+  "[4.0, Inf)", 4L,
+  "[3.5, 4.0)", 5L,
+  "[3.0, 3.5)", 6L,
+  "[2.5, 3.0)", 7L,
+  "[2.0, 2.5)", 8L,
+  "[1.5, 2.0)", 9L,
+  "[1.0, 1.5)", 10L,
+  "[0.5, 1.0)", 11L,
+  "[0.0, 0.5)", 12L,
+  "[-0.5, 0.0)", 13L,
+  "[-0.5, -Inf)", 14L,
+) |> 
+  knitr::kable()
+```
+
+This is one of typically several look-up tables and variables representing loan- or borrower-specific information.
+
+There are two interesting aspects at play in this type of *"model"* that make for a unique statistical validation approach:
+
+1. The risk ratings introduce an *ordinal* variable, which are used to rank-order *probability of default* (which is a continuous variable)
+2. The independent variables (e.g., Current Ratio) are binned, categorical variables representing unique intervals
+
+An obvious first validation step would be to use your historical data to calculate the default percentages across each risk rating assigned at origination to see if the risk ratings are appropriately rank-ordering the empirical default percentages. But this exercise doesn't tell you all you need to know about how effectively the *bin breaks* are rank-ordering risk.
+
+This is where we can start to see some overlap with a lot of the mathematics involved in developing a scorecard. By default, scorecards require each independent variable to be categorical; because of this, binning of continuous variables is almost always employed during scorecard development.
+
+Statistics like *Weight-of-Evidence* and (subsequently) *Information Value* can provide tremendous insight into how well the defined bins separate *goods* from the *bads* against a binary dependent variable. 
+
+Because of this, you can simulate (on a variable-by-variable basis) different breaks for each continuous independent variable and see how the Information Value increases, and/or how well rank-ordered the WoE is across each bin (negative WoE values for the bins that correspond to weak risk ratings like 14, and positive WoE values for the bins that correspond to strong risk ratings like 4).
+
+Additionally, functions like `bin_quantile()` can help derive bins that equally distribute the amount of available data into each bin, to help avoid overfitting in a particular bin.
+
+
+
+
