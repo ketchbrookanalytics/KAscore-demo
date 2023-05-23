@@ -136,6 +136,14 @@ server <- function(input, output, session) {
     reactable::reactable(data())
   })
   
+  shiny::observeEvent(data(), {
+    shinyWidgets::updatePickerInput(
+      session = session,
+      inputId = "continuous_variable",
+      choices = colnames(data())
+    )
+  })
+  
   # This renderUI generates the set of numericInputs that we will use to define
   # the breaks that will be passed to compute_iv()
   # This implementation creates (n_bins - 1) numericInputs because that information
