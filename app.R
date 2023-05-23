@@ -29,11 +29,31 @@ compute_iv <- function(data, breaks, outcome, predictor) {
 
 }
 
-ui <- shiny::fluidPage(
-  shinyjs::useShinyjs(),
-  shiny::tabsetPanel(
-    shiny::tabPanel(
-      title = "IV Simulator",
+ui <- bs4Dash::dashboardPage(
+  header = bs4Dash::dashboardHeader(
+    title = "{KA Score} Demo"
+  ),
+  sidebar = bs4Dash::dashboardSidebar(
+    bs4Dash::sidebarMenu(
+      bs4Dash::menuItem(
+        text = "Data",
+        tabName = "data_page"
+      ),
+      bs4Dash::menuItem(
+        text = "IV Simulator",
+        tabName = "simulator_page"
+      )
+    )
+  ),
+  body = bs4Dash::dashboardBody(
+    shinyjs::useShinyjs(),
+    bs4Dash::tabItems(
+      bs4Dash::tabItem(
+        tabName = "data_page",
+        "Placeholder"
+      ),
+      bs4Dash::tabItem(
+        tabName = "simulator_page",
         shiny::sidebarLayout(
           sidebarPanel = shiny::sidebarPanel(
             shiny::selectInput(
@@ -51,22 +71,25 @@ ui <- shiny::fluidPage(
             shiny::actionButton(inputId = "set", label = "Set")
           ),
           mainPanel = shiny::mainPanel(
-            shiny::column(
-              width = 4,
-              shiny::h1("Cutpoints:"),
-              shiny::uiOutput(outputId = "cutpoints_ui"),
-            ),
-            shiny::column(
-              width = 2,
-              shiny::actionButton(inputId = "apply", label = "Apply")
-            ),
-            shiny::column(
-              width = 4,
-              shiny::h1("Information Value"),
-              shiny::textOutput(outputId = "information_value")
+            shiny::fluidRow(
+              shiny::column(
+                width = 4,
+                shiny::h1("Cutpoints:"),
+                shiny::uiOutput(outputId = "cutpoints_ui"),
+              ),
+              shiny::column(
+                width = 2,
+                shiny::actionButton(inputId = "apply", label = "Apply")
+              ),
+              shiny::column(
+                width = 4,
+                shiny::h1("Information Value"),
+                shiny::textOutput(outputId = "information_value")
+              )   
             )
           )
         )
+      )
     )
   )
 )
