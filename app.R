@@ -188,7 +188,7 @@ server <- function(input, output, session) {
     # endpoint of each interval by processing the character vector.
     # The extraction is omitted for the last interval (which always ends in Inf)
     cutpoints <- KAscore::bin_quantile(
-      df[[input$continuous_variable]], 
+      data()[[input$continuous_variable]], 
       n_bins = input$n_bins
     ) |>
       levels() |> 
