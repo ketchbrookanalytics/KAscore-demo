@@ -50,7 +50,36 @@ ui <- bs4Dash::dashboardPage(
     bs4Dash::tabItems(
       bs4Dash::tabItem(
         tabName = "data_page",
-        "Placeholder"
+        bs4Dash::box(
+          title = "Select Data Source",
+          width = 12,
+          height = "100px",
+          shiny::fluidRow(
+            shiny::column(
+              width = 6,
+              shinyWidgets::pickerInput(
+                inputId = "data_source",
+                label = NULL,
+                choices = c("Demo data", "Upload file")
+              )
+            ),
+            shiny::column(
+              width = 6,
+              shiny::conditionalPanel(
+                condition = "input.data_source === 'Upload file'",
+                shiny::fileInput(
+                  inputId = "user_data",
+                  label = NULL
+                )
+              )
+            )
+          )
+        ),
+        bs4Dash::box(
+          title = "Preview Selected Data",
+          width = 12,
+          reactable::reactableOutput(outputId = "preview_data")
+        )
       ),
       bs4Dash::tabItem(
         tabName = "simulator_page",
