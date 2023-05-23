@@ -74,40 +74,36 @@ ui <- bs4Dash::dashboardPage(
       ),
       bs4Dash::tabItem(
         tabName = "simulator_page",
-        shiny::sidebarLayout(
-          sidebarPanel = shiny::sidebarPanel(
-            shiny::selectInput(
-              inputId = "continuous_variable",
-              label = "Select Continuous Variable",
-              choices = "loan_amount" # TODO: The list of possible values should come from data
+        bs4Dash::box(
+          title = "Set Options",
+          width = 12,
+          shiny::fluidRow(
+            shiny::column(
+              width = 6,
+              shinyWidgets::pickerInput(
+                inputId = "continuous_variable",
+                label = "Select Continuous Variable",
+                choices = NULL
+              )
             ),
-            shiny::numericInput(
-              inputId = "n_bins",
-              label = "# of Bins",
-              value = 5,
-              min = 2,
-              step = 1
-            ),
-            shiny::actionButton(inputId = "set", label = "Set")
-          ),
-          mainPanel = shiny::mainPanel(
-            shiny::fluidRow(
-              shiny::column(
-                width = 4,
-                shiny::h1("Cutpoints:"),
-                shiny::uiOutput(outputId = "cutpoints_ui"),
-              ),
-              shiny::column(
-                width = 2,
-                shiny::actionButton(inputId = "apply", label = "Apply")
-              ),
-              shiny::column(
-                width = 4,
-                shiny::h1("Information Value"),
-                shiny::textOutput(outputId = "information_value")
-              )   
+            shiny::column(
+              width = 6,
+              shiny::numericInput(
+                inputId = "n_bins",
+                label = "# of Bins",
+                value = 5,
+                min = 2,
+                step = 1
+              )
             )
-          )
+          ),
+          shiny::actionButton(inputId = "set", label = "Set", width = "100%")
+        ),
+        bs4Dash::box(
+          title = "Cutpoints",
+          width = 12,
+          shiny::uiOutput(outputId = "cutpoints_ui"),
+          shiny::actionButton(inputId = "apply", label = "Apply", width = "100%")
         )
       )
     )
