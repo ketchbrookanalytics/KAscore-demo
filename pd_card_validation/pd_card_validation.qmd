@@ -1,5 +1,5 @@
 ---
-title: "PD Card Validation"
+title: "Validating PD Models Using {KAscore}"
 author: "Ketchbrook Analytics"
 format: html
 execute:
@@ -37,15 +37,139 @@ There are two interesting aspects at play in this type of *"model"* that make fo
 1. The risk ratings introduce an *ordinal* variable, which are used to rank-order *probability of default* (which is a continuous variable)
 2. The independent variables (e.g., Current Ratio) are binned, categorical variables representing unique intervals
 
-An obvious first validation step would be to use your historical data to calculate the default percentages across each risk rating assigned at origination to see if the risk ratings are appropriately rank-ordering the empirical default percentages. But this exercise doesn't tell you all you need to know about how effectively the *bin breaks* are rank-ordering risk.
+An obvious first validation step would be to use your historical data to calculate the default percentages across each bin (and subsequent risk rating assigned at origination) to see if the bins & associated risk ratings are appropriately rank-ordering the empirical default percentages. But this exercise doesn't tell you all you need to know about how effectively the *bin breaks* are rank-ordering risk.
 
 This is where we can start to see some overlap with a lot of the mathematics involved in developing a scorecard. By default, scorecards require each independent variable to be categorical; because of this, binning of continuous variables is almost always employed during scorecard development.
 
 Statistics like *Weight-of-Evidence* and (subsequently) *Information Value* can provide tremendous insight into how well the defined bins separate *goods* from the *bads* against a binary dependent variable. 
 
+## Weight-of-Evidence
+
+Weight-of-Evidence (or "WoE") is a measure of the distribution of *"goods"* vs. *"bads"* in a particular category of an independent variable. It's interpretable, such that negative numbers indicate that there is a higher proportion of "bads" than "goods" in that particular class of the independent variable, while positive "WoE" values indicate that there is a higher proportion of "goods" than there are "bads".
+
+Because of this interpretability, *WoE* is especially useful for ensuring that bins are rank-ordering risk appropriately. Let's look at the following example data:
+
+```{r}
+
+# lengths <- dplyr::count(KAscore::loans, amount_of_existing_debt) |> 
+#   dplyr::pull(n)
+
+loans <- KAscore::loans |> 
+  dplyr::mutate(
+    default_status = factor(default_status, levels = c("good", "bad")), 
+    current_ratio = dplyr::case_when(
+      
+      amount_of_existing_debt == levels(KAscore::loans$amount_of_existing_debt)[1] ~ 
+        sample(seq(2.5, 5.5, 0.1), size = nrow(KAscore::loans), replace = TRUE),
+      
+      amount_of_existing_debt == levels(KAscore::loans$amount_of_existing_debt)[2] ~
+        sample(seq(1.5, 3.5, 0.1), size = nrow(KAscore::loans), replace = TRUE),
+
+      amount_of_existing_debt == levels(KAscore::loans$amount_of_existing_debt)[3] ~
+        sample(seq(0.5, 2.5, 0.1), size = nrow(KAscore::loans), replace = TRUE),
+      
+      TRUE ~ sample(seq(-0.5, 1.2, 0.1), size = nrow(KAscore::loans), replace = TRUE)
+    )
+  ) |> 
+  dplyr::select(current_ratio, default_status)
+
+loans
+```
+
+Now let's take a look at the distribution of `current_ratio`, separated by `default status`:
+
+```{r, echo=TRUE}
+p <- loans |> 
+  dplyr::mutate(breaks = KAscore::bin_quantile(current_ratio)) |> 
+  ggplot2::ggplot(
+    ggplot2::aes(
+      x = current_ratio, 
+      color = default_status
+    )
+  ) + 
+  ggplot2::geom_density()
+
+p
+```
+
+## Binning Continuous Variables --> Categorical Variables
+
+Let's "bin" the `current_ratio` variable, just simply using quantiles:
+
+```{r, echo=TRUE}
+loans <- loans |> 
+  dplyr::mutate(
+    current_ratio_binned = KAscore::bin_quantile(
+      x = loans$current_ratio, 
+      n_bins = 4,
+      decimals = 2
+    )
+  )
+  
+levels(loans$current_ratio_binned)
+```
+
+We could think of this as a PD Card:
+
+```{r, echo=TRUE}
+tibble::tibble(
+  Bin = levels(loans$current_ratio_binned),
+  `PD Rating` = c(14:4)
+)
+```
+
+```{r}
+# p + 
+#   ggplot2::geom_vline(
+#     xintercept = c(-Inf, 0.8, 2.1, 3.7, Inf),
+#     linetype = "dashed"
+#   )
+```
+
+## Weight-of-Evidence
+
+```{r}
+KAscore::woe(
+  loans,
+  outcome = default_status,
+  predictor = current_ratio_binned
+) |> 
+  dplyr::select(-variable) |> 
+  dplyr::arrange(woe)
+```
+
+## Information Value
+
+Information value is a statistic that provides insight into the predictive power of an independent variable (as a whole, not by category). When you alter the bins, the Information Value will change. Ideally, you want to optimize the bins such that the Information Value is maximized.
+
+~Information_Value,	~Interpretation
+"< 0.02"	, "Not predictive",
+"[0.02, 0.1)"	, "Weakly predictive",
+"[0.1, 0.3)"	, "Moderately predictive",
+"[0.3, 0.5)"	, "Strongly predictive",
+"> 0.5"	, "Likely overfit"
+```{r}
+tibble::tribble(
+  ~Information_Value,	~Interpretation,
+"< 0.02"	, "Not predictive",
+"[0.02, 0.1)"	, "Weakly predictive",
+"[0.1, 0.3)"	, "Moderately predictive",
+"[0.3, 0.5)"	, "Strongly predictive",
+"> 0.5"	, "Likely overfit"
+)
+```
+
 Because of this, you can simulate (on a variable-by-variable basis) different breaks for each continuous independent variable and see how the Information Value increases, and/or how well rank-ordered the WoE is across each bin (negative WoE values for the bins that correspond to weak risk ratings like 14, and positive WoE values for the bins that correspond to strong risk ratings like 4).
 
-Additionally, functions like `bin_quantile()` can help derive bins that equally distribute the amount of available data into each bin, to help avoid overfitting in a particular bin.
+```{r, echo=TRUE}
+KAscore::iv(
+  loans,
+  outcome = default_status,
+  predictors = current_ratio_binned, 
+  labels = TRUE
+)
+```
+
 
 
 

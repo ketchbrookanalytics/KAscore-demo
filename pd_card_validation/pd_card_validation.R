@@ -34,14 +34,18 @@ KAscore::woe(
 # Bin the 'loan_amount' variable by quantile & view breaks
 KAscore::bin_quantile(
   df$loan_amount, 
-  n_bins = 5
+  n_bins = 4
 ) |> levels()
 
 # Create a list of 4 different "breaks" scenarios
 breaks <- list(
+  
   `c(-Inf, 13000, 23000, 39000, Inf)` = c(-Inf, 13000, 23000, 39000, Inf),
+  
   `c(-Inf, 13500, 23500, 39500, Inf)` = c(-Inf, 13500, 23500, 39500, Inf),
+  
   `c(-Inf, 14000, 24000, 40000, Inf)` = c(-Inf, 14000, 24000, 40000, Inf),
+  
   bin_quantile = c(-Inf ,13655, 23195, 39722, Inf)
 )
 
@@ -105,3 +109,62 @@ purrr::map(
   ggplot2::theme(
     panel.grid.major.y = ggplot2::element_blank()
   )
+
+
+# More EDA -- plot distribution of continuous independent variable by dependent 
+# variable (this can help guide binning)
+df |> 
+  ggplot2::ggplot(
+    ggplot2::aes(
+      x = loan_amount,
+      color = default_status
+    )
+  ) + 
+  ggplot2::geom_density(linewidth = 1) + 
+  ggplot2::scale_x_continuous(labels = scales::label_dollar()) + 
+  ggplot2::labs(
+    x = "Loan Amount",
+    y = "Density",
+    title = "Distribution of Loan Amount by Default Status"
+  ) + 
+  ggplot2::theme_minimal() + 
+  # Add bin breaks
+  ggplot2::geom_vline(
+    xintercept = breaks[[1]], 
+    linetype = "dashed"
+  )
+
+
+
+map_woe <- function(data, breaks, outcome, predictor) {
+  
+  df <- data |> 
+    dplyr::mutate(
+      {{predictor}} := cut(df$loan_amount, breaks = breaks)
+    )
+  
+  KAscore::woe(
+    data = df, 
+    outcome = {{outcome}}, 
+    predictors = {{predictor}}, 
+    verbose = FALSE
+  )
+  
+}
+
+map_woe(
+  df, 
+  breaks = breaks[[1]], 
+  outcome = default_status, 
+  predictor = loan_amount
+)
+
+KAscore::woe(
+  df, 
+  outcome = default_status, 
+  predictors = collateral_type,
+  verbose = FALSE
+) |> 
+  dplyr::select(class, dplyr::starts_with("n_"), woe) |> 
+  dplyr::arrange(woe)
+
