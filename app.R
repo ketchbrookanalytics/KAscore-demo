@@ -1,12 +1,3 @@
-# Set up data
-# TODO: We should allow users to use their own data
-df <- KAscore::loans
-
-# TODO: This processing should take a variable as an input
-df$default_status <- factor(
-  df$default_status, 
-  levels = c("good", "bad")
-)
 
 # Function to compute information value
 compute_iv <- function(data, breaks, outcome, predictor) {
@@ -124,6 +115,31 @@ ui <- bs4Dash::dashboardPage(
 )
 
 server <- function(input, output, session) {
+  data <- reactive({
+    if (input$data_source == "Demo data") {
+      KAscore::loans |> 
+        dplyr::mutate(
+          default_status = factor(
+            default_status,
+            levels = c("good", "bad")
+          )
+        )
+    } else {
+      shiny::req(input$user_data)
+      file_extension <- tools::file_ext(input$user_data$name)
+      switch(
+        file_extension,
+        csv = vroom::vroom(input$user_data$datapath, delim = ","),
+        tsv = vroom::vroom(input$user_data$datapath, delim = "\t"),
+        shiny::validate("Invalid file; Please upload a .csv or .tsv file")
+      )
+    }
+  })
+
+  output$preview_data <- reactable::renderReactable({
+    reactable::reactable(data())
+  })
+  
   # This renderUI generates the set of numericInputs that we will use to define
   # the breaks that will be passed to compute_iv()
   # This implementation creates (n_bins - 1) numericInputs because that information
