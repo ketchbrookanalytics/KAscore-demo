@@ -20,6 +20,29 @@ compute_iv <- function(data, breaks, outcome, predictor) {
 
 }
 
+# Function to create density chart
+plot_density <- function(data, continuous_variable, outcome_variable, breaks) {
+  data |> 
+    ggplot2::ggplot(
+      ggplot2::aes(
+        x = .data[[continuous_variable]],
+        color = .data[[outcome_variable]]
+      )
+    ) + 
+    ggplot2::geom_density(linewidth = 1) + 
+    ggplot2::scale_x_continuous(labels = scales::label_dollar()) + 
+    ggplot2::labs(
+      x = continuous_variable,
+      y = "Density",
+    ) + 
+    ggplot2::theme_minimal() + 
+    # Add bin breaks
+    ggplot2::geom_vline(
+      xintercept = breaks, 
+      linetype = "dashed"
+    )
+}
+
 ui <- bs4Dash::dashboardPage(
   header = bs4Dash::dashboardHeader(
     title = "{KA Score} Demo"
@@ -117,13 +140,26 @@ ui <- bs4Dash::dashboardPage(
           ),
           shiny::actionButton(inputId = "set", label = "Set", width = "100%")
         ),
-        bs4Dash::box(
-          title = "Cutpoints",
-          width = 12,
-          shiny::uiOutput(outputId = "cutpoints_ui"),
-          shiny::actionButton(inputId = "apply", label = "Apply", width = "100%")
-        ),
-        bs4Dash::bs4InfoBoxOutput(outputId = "information_value_box", width = 12),
+        shiny::fluidRow(
+          shiny::column(
+            width = 3,
+            bs4Dash::box(
+              title = "Cutpoints",
+              width = 12,
+              shiny::uiOutput(outputId = "cutpoints_ui"),
+              shiny::actionButton(inputId = "apply", label = "Apply", width = "100%")
+            )
+          ),
+          shiny::column(
+            width = 9,
+            bs4Dash::box(
+              title = "Distribution",
+              width = 12,
+              shiny::plotOutput(outputId = "density_plot")
+            ),
+            bs4Dash::bs4InfoBoxOutput(outputId = "information_value_box", width = 12)
+          )
+        )
       )
     )
   )
@@ -233,11 +269,29 @@ server <- function(input, output, session) {
     })
   })
   
+  density_plot <- shiny::eventReactive(input$apply, {
+    cutpoints <- sapply(1:(input$n_bins - 1), function(i) {
+      input[[paste0("cutpoint", i)]]
+    })
+
+    plot_density(
+      data(),
+      input$continuous_variable,
+      input$outcome_variable,
+      c(-Inf, cutpoints, Inf)
+    )
+  })
+  
+  output$density_plot <- shiny::renderPlot({
+    density_plot()
+  })
+  
   # This object will store the outcome of the information value computation
   outcome <- shiny::reactiveVal(NULL)
   
   # Compute information value
   shiny::observeEvent(input$apply, {
+    # TODO: Extract to function
     cutpoints <- sapply(1:(input$n_bins - 1), function(i) {
       input[[paste0("cutpoint", i)]]
     })
