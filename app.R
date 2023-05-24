@@ -12,7 +12,7 @@ compute_iv <- function(data, breaks, outcome, predictor) {
 
   KAscore::iv(
     data = df, 
-    outcome = {{outcome}}, 
+    outcome = outcome, 
     predictors = predictor, 
     verbose = FALSE, 
     labels = TRUE
@@ -79,7 +79,7 @@ ui <- bs4Dash::dashboardPage(
           width = 12,
           shiny::fluidRow(
             shiny::column(
-              width = 6,
+              width = 3,
               shinyWidgets::pickerInput(
                 inputId = "continuous_variable",
                 label = "Select Continuous Variable",
@@ -87,12 +87,30 @@ ui <- bs4Dash::dashboardPage(
               )
             ),
             shiny::column(
-              width = 6,
+              width = 3,
+              shinyWidgets::pickerInput(
+                inputId = "outcome_variable",
+                label = "Select Outcome Variable",
+                choices = NULL
+              )
+            ),
+            shiny::column(
+              width = 3,
               shiny::numericInput(
                 inputId = "n_bins",
                 label = "# of Bins",
                 value = 5,
                 min = 2,
+                step = 1
+              )
+            ),
+            shiny::column(
+              width = 3,
+              shiny::numericInput(
+                inputId = "n_decimals",
+                label = "# of Decimals",
+                value = 0,
+                min = 0,
                 step = 1
               )
             )
@@ -143,6 +161,12 @@ server <- function(input, output, session) {
       inputId = "continuous_variable",
       choices = colnames(data())
     )
+    
+    shinyWidgets::updatePickerInput(
+      session = session,
+      inputId = "outcome_variable",
+      choices = colnames(data())
+    )
   })
   
   # This renderUI generates the set of numericInputs that we will use to define
@@ -152,7 +176,7 @@ server <- function(input, output, session) {
   # The disabled textInputs are just to improve UX
   output$cutpoints_ui <- shiny::renderUI({
     shiny::validate(
-      shiny::need(input$set, "Set # of bins")
+      shiny::need(input$set, "Set Options")
     )
 
     shiny::tagList(
@@ -189,8 +213,9 @@ server <- function(input, output, session) {
     # endpoint of each interval by processing the character vector.
     # The extraction is omitted for the last interval (which always ends in Inf)
     cutpoints <- KAscore::bin_quantile(
-      data()[[input$continuous_variable]], 
-      n_bins = input$n_bins
+      x = data()[[input$continuous_variable]], 
+      n_bins = input$n_bins,
+      decimals = input$n_decimals
     ) |>
       levels() |> 
       head(-1) |> # Remove last interval
@@ -221,7 +246,7 @@ server <- function(input, output, session) {
       compute_iv(
         data = data(),
         breaks = c(-Inf, cutpoints, Inf),
-        outcome = default_status, # TODO: This should be selected by user
+        outcome = input$outcome_variable,
         predictor = input$continuous_variable
       )
     )
