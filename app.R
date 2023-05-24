@@ -123,7 +123,7 @@ ui <- bs4Dash::dashboardPage(
           shiny::uiOutput(outputId = "cutpoints_ui"),
           shiny::actionButton(inputId = "apply", label = "Apply", width = "100%")
         ),
-        shiny::textOutput(outputId = "information_value")
+        bs4Dash::bs4InfoBoxOutput(outputId = "information_value_box", width = 12),
       )
     )
   )
@@ -253,10 +253,15 @@ server <- function(input, output, session) {
   })
   
   # Show the resulting value
-  # TODO: Improve UI
-  output$information_value <- shiny::renderText({
+  output$information_value_box <- bs4Dash::renderbs4InfoBox({
     shiny::req(outcome())
-    paste(outcome()$iv |> round(digits = 4), "(", outcome()$label, ")")
+    bs4Dash::bs4InfoBox(
+      title = "Information Value",
+      value = outcome()$label,
+      subtitle = outcome()$iv |> round(digits = 4),
+      color = NULL,
+      width = 12
+    )
   })
 }
 
