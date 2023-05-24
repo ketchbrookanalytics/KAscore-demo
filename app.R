@@ -4,8 +4,8 @@ compute_iv <- function(data, breaks, outcome, predictor) {
 
   df <- data |> 
     dplyr::mutate(
-      {{predictor}} := cut(
-        df$loan_amount, # TODO: This value should be a parameter in the function
+      predictor := cut(
+        data[[predictor]],
         breaks = breaks
       )
     )
@@ -13,7 +13,7 @@ compute_iv <- function(data, breaks, outcome, predictor) {
   KAscore::iv(
     data = df, 
     outcome = {{outcome}}, 
-    predictors = {{predictor}}, 
+    predictors = predictor, 
     verbose = FALSE, 
     labels = TRUE
   )
@@ -104,7 +104,8 @@ ui <- bs4Dash::dashboardPage(
           width = 12,
           shiny::uiOutput(outputId = "cutpoints_ui"),
           shiny::actionButton(inputId = "apply", label = "Apply", width = "100%")
-        )
+        ),
+        shiny::textOutput(outputId = "information_value")
       )
     )
   )
@@ -218,10 +219,10 @@ server <- function(input, output, session) {
 
     outcome(
       compute_iv(
-        data = df, # TODO: We should allow users to use their own data
+        data = data(),
         breaks = c(-Inf, cutpoints, Inf),
         outcome = default_status, # TODO: This should be selected by user
-        predictor = loan_amount # TODO: This should be selected by user
+        predictor = input$continuous_variable
       )
     )
   })
