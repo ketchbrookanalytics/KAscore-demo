@@ -159,12 +159,12 @@ ui <- bs4Dash::dashboardPage(
           ),
           shiny::column(
             width = 9,
+            bs4Dash::bs4InfoBoxOutput(outputId = "information_value_box", width = 12),
             bs4Dash::box(
               title = "Distribution",
               width = 12,
-              shiny::plotOutput(outputId = "density_plot")
-            ),
-            bs4Dash::bs4InfoBoxOutput(outputId = "information_value_box", width = 12)
+              shiny::plotOutput(outputId = "density_plot", height = "375px")
+            )
           )
         )
       )
