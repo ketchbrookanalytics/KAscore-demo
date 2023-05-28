@@ -1,3 +1,9 @@
+# Function to rename colname
+rename_colname <- function(colname) {
+  colname |> 
+    stringr::str_replace_all("_", " ") |> 
+    stringr::str_to_title()
+}
 
 # Function to compute information value
 compute_iv <- function(data, breaks, outcome, predictor) {
@@ -174,7 +180,8 @@ server <- function(input, output, session) {
             default_status,
             levels = c("good", "bad")
           )
-        )
+        ) |> 
+        dplyr::rename_with(.fn = rename_colname)
     } else {
       shiny::req(input$user_data)
       file_extension <- tools::file_ext(input$user_data$name)
