@@ -37,6 +37,7 @@ plot_density <- function(data, continuous_variable, outcome_variable, breaks) {
     ) + 
     ggplot2::geom_density(linewidth = 1) + 
     ggplot2::scale_x_continuous(labels = scales::label_dollar()) + 
+    ggplot2::scale_y_continuous(labels = scales::label_comma()) + 
     ggplot2::labs(
       x = continuous_variable,
       y = "Density",
