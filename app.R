@@ -41,7 +41,7 @@ plot_density <- function(data, continuous_variable, outcome_variable, breaks) {
       x = continuous_variable,
       y = "Density",
     ) + 
-    ggplot2::theme_minimal() + 
+    ggplot2::theme_minimal(base_size = 22) + 
     # Add bin breaks
     ggplot2::geom_vline(
       xintercept = breaks, 
