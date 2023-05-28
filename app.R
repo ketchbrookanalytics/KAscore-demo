@@ -98,7 +98,7 @@ ui <- bs4Dash::dashboardPage(
         bs4Dash::box(
           title = "Preview Selected Data",
           width = 12,
-          reactable::reactableOutput(outputId = "preview_data")
+          DT::DTOutput(outputId = "preview_data")
         )
       ),
       bs4Dash::tabItem(
@@ -194,8 +194,14 @@ server <- function(input, output, session) {
     }
   })
 
-  output$preview_data <- reactable::renderReactable({
-    reactable::reactable(data())
+  output$preview_data <- DT::renderDT({
+    data() |> 
+      DT::datatable(
+        rownames = FALSE,
+        selection = "none",
+        options = list(dom = "tip",
+                       pageLength = 5)
+      )
   })
   
   shiny::observeEvent(data(), {
