@@ -1,0 +1,235 @@
+---
+title: "{KAscore}"
+subtitle: "The Breakthrough R Package for Scorecard Models"
+author: "from Ketchbrook Analytics"
+format: 
+  revealjs:
+    theme: default
+    chalkboard: true
+    logo: www/ketchbrook_logo.png
+    incremental: false
+    transition: slide
+    preview-links: true
+---
+
+## What is {KAscore}?
+
+:::: {.columns}
+
+::: {.column width="50%"}
+- R package that contains a suite of functions for developing & managing credit scorecard models
+- [{KAscore} Website](https://ketchbrookanalytics.github.io/KAscore)
+:::
+
+::: {.column width="50%"}
+<img src="www/intelligent_credit_scoring_book_cover.jpg" align="right" height="500"/>
+:::
+
+::::
+
+::: {.notes}
+- Fully 
+:::
+
+## Data Science in the Farm Credit System
+
+::: {.incremental}
+- Modern tools call for modern solutions
+- ~~Platform~~ Software as a Service
+- Let's build together
+:::
+
+::: {.notes}
+- When I started at Farm Credit East back in 2017, the most cutting-edge analytics software available in the Farm Credit System were these giant Macro-enabled Excel workbooks developed by somebody who was also a former employee of the Farm Credit System
++ and these Excel tools actually worked well for a lot of tasks that folks were doing years ago, mostly just descriptive analytics and the only deliverables the analytics team was responsible for were static reports on a quarterly or annual basis
++ but the analytics function within Farm Credit has come a *long* way since then
++ folks are building credit risk models, some of which actually end up as part of a production process within the ACA, including scorecards
++ open source software (particular the R language) has evolved as the tool-of-choice for most analytics teams within the System for a number of reasons
+- ability to easily handle a lot more data than Excel
+- reproducibility (I like to think of code as a "recipe", and taking a code-first approach provides you with a "recipe" for your analysis; got new data in this month?  Just apply the same "recipe" pointed at the new data)
+- the ecosystem of packages available for R is continuing to grow; from packages that just make it easier for you to transform and manipulate data to packages that are super-specific and -- for example -- help you easily develop a credit scorecard model; if you are working on writing R code to solve some specific use case, chances are that there's an R package out there that will help
++ And there are really two types of vendors out there that we see:
+1. Vendors who offer these Excel workbooks to help Excel users with their work, and 
+2. Vendors who are offering proprietary software that becomes another *platform* that your team has to manage
+- but there's nobody really meeting data analysts where they are -- in the open source languages they work in everyday (R, Python, and SQL) -- there's no vendor helping them improve their quality of life and workflows within the tools they already use and are comfortable with -- that's the need that Ketchbrook is trying to serve
+- With that in mind, Ketchbrook Analytics is committed to *building* software that meets you where you are (R packages, Python packages for those using Python, Shiny web applications); software that allows you to do your job easier and lets you use the tooling that actually fits into your current workflow
+- At Ketchbrook, we have a really strong consulting practice that includes model development & validation services, among a bunch of other data science offerings
++ But we know that you have really brilliant analytics staff working within your ACAs that you have hired over the past few years, and you don't need us to do *everything*
++ Additionally, a lot of the problems you are up against are problems that you've never encountered before at your ACA -- CECL is a brand new initiative, what's expected for stress testing today is *way* different than what we used to be able to get away with; so collaboration is KEY
++ We want to be part of that collaboration; we believe that we can be a valuable partner in building the software that's going to solve these problems
+- One of my calls to action today is: "Let's build together"
++ We want to hear from *you* about what we should build next (Should it be an entire CECL framework? What is going to make your life easier?)
++ This R package we are demo-ing today is hopefully a really great example of a need that existed (and continues to exist) in the System where we collaborated with a few of the ACAs who are on the call today to build software that is useful to you, in a way that is extensible to fit the nuances of however you need to implement or monitor your own credit scorecards
+:::
+
+## Demo
+
+```{.r}
+library(KAscore)
+
+# Check out the built-in `loans` dataset
+
+loans
+```
+
+<br>
+
+```{r}
+library(KAscore)
+
+# Reverse levels in dependent variable
+loans$default_status <- factor(
+  loans$default_status, 
+  levels = c("good", "bad")
+)
+
+# Pass first 5 rows of data to OJS
+ojs_define(loans_ojs = head(loans, n = 5L))
+```
+
+```{ojs}
+Inputs.table(transpose(loans_ojs))
+```
+
+::: {.notes}
+One thing that anyone who knows me well knows is that I really dislike slide deck presentations... We just want to build something that fits your use case and works really well and then show you how it works -- so that's exactly what we're going to do next
+:::
+
+## Weight of Evidence
+
+```{.r code-line-numbers="4|5|6|7"}
+# Calculate the Weight-of-Evidence values for the
+# "collateral_type" and "housing_status" variables
+
+woe(
+  data = loans,
+  outcome = default_status,
+  predictors = c(collateral_type, housing_status)
+)
+```
+
+<br>
+
+```{r}
+ojs_define(
+  woe_ojs = woe(
+    data = loans,
+    outcome = default_status,
+    predictors = c(collateral_type, housing_status), 
+    verbose = FALSE
+  ) |> 
+    dplyr::select(-(tidyselect::starts_with("p_")))
+)
+```
+
+```{ojs}
+Inputs.table(transpose(woe_ojs))
+```
+
+## Weight of Evidence
+
+```{.r code-line-numbers="8"}
+# Instead of creating a "dictionary" of the unique WoE values,
+# add the WoE values to the original data frame
+
+woe(
+  data = loans,
+  outcome = default_status,
+  predictors = c(industry, housing_status),
+  method = "add"
+)
+```
+
+<br>
+
+```{r}
+ojs_define(
+  woe_add_ojs = woe(
+    data = loans,
+    outcome = default_status,
+    predictors = c(collateral_type, housing_status), 
+    method = "add",
+    verbose = FALSE
+  ) |> 
+    dplyr::slice(3:8)
+)
+```
+
+```{ojs}
+Inputs.table(transpose(woe_add_ojs))
+```
+
+## Weight of Evidence
+
+```{.r code-line-numbers="8"}
+# Or we can replace the original independent variables with
+# their WoE equivalents, via `method = "replace"`
+
+woe(
+  data = loans,
+  outcome = default_status,
+  predictors = c(industry, housing_status),
+  method = "replace"
+)
+```
+
+<br>
+
+```{r}
+ojs_define(
+  woe_replace_ojs = woe(
+    data = loans,
+    outcome = default_status,
+    predictors = c(collateral_type, housing_status), 
+    method = "replace",
+    verbose = FALSE
+  ) |> 
+    dplyr::slice(3:8)
+)
+```
+
+```{ojs}
+Inputs.table(transpose(woe_replace_ojs))
+```
+
+## Information Value
+
+```{.r code-line-numbers="4|5-10"}
+iv(
+    data = loans,
+    outcome = default_status,
+    predictors = c(
+      amount_of_existing_debt,
+      collateral_type,
+      housing_status,
+      years_at_current_address
+    )
+)
+```
+
+<br>
+
+```{r}
+ojs_define(
+  iv_ojs = iv(
+    data = loans,
+    outcome = default_status,
+    predictors = c(
+      amount_of_existing_debt,
+      collateral_type,
+      housing_status,
+      years_at_current_address
+    ),
+    verbose = FALSE, 
+    labels = TRUE
+  )
+)
+```
+
+```{ojs}
+Inputs.table(transpose(iv_ojs))
+```
+
+## Build a Scorecard
+
+
