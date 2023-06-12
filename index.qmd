@@ -135,7 +135,7 @@ Inputs.table(transpose(woe_ojs))
 woe(
   data = loans,
   outcome = default_status,
-  predictors = c(industry, housing_status),
+  predictors = c(collateral_type, housing_status),
   method = "add"
 )
 ```
@@ -168,7 +168,7 @@ Inputs.table(transpose(woe_add_ojs))
 woe(
   data = loans,
   outcome = default_status,
-  predictors = c(industry, housing_status),
+  predictors = c(collateral_type, housing_status),
   method = "replace"
 )
 ```
@@ -194,7 +194,7 @@ Inputs.table(transpose(woe_replace_ojs))
 
 ## Information Value
 
-```{.r code-line-numbers="4|5-10"}
+```{.r code-line-numbers="1|2|3|4-10"}
 iv(
     data = loans,
     outcome = default_status,
@@ -202,6 +202,7 @@ iv(
       amount_of_existing_debt,
       collateral_type,
       housing_status,
+      industry,
       years_at_current_address
     )
 )
@@ -218,6 +219,7 @@ ojs_define(
       amount_of_existing_debt,
       collateral_type,
       housing_status,
+      industry,
       years_at_current_address
     ),
     verbose = FALSE, 
@@ -232,4 +234,289 @@ Inputs.table(transpose(iv_ojs))
 
 ## Build a Scorecard
 
+```{.r code-line-numbers="4|5|6|7"}
+# Create our training data
 
+train <- loans |> 
+  woe(
+    outcome = default_status,
+    predictors = c(collateral_type, housing_status, industry),
+    method = "replace"
+  )
+```
+
+<br>
+
+```{r}
+train <- loans |> 
+  woe(
+    outcome = default_status,
+    predictors = c(
+      collateral_type,
+      housing_status,
+      industry
+    ),
+    method = "replace",
+    verbose = FALSE
+  )
+
+ojs_define(train_ojs = head(train, n = 100L))
+```
+
+```{ojs}
+Inputs.table(transpose(train_ojs))
+```
+
+## Build a Scorecard
+
+```{r}
+#| echo: true
+
+# Fit the logistic regression model
+
+fit <- glm(
+  formula = default_status ~  ., 
+  data = train, 
+  family = "binomial"
+)
+
+summary(fit)
+```
+
+## Target Points/Odds {auto-animate=true}
+
+```{r}
+#| echo: true
+
+# A loan that scores 600 points has 30:1 odds of being "good"
+
+# I.e., loans that score 600 points have a 97% probability of being "good",
+# and a 3% probability of being "bad"
+
+target_points <- 600
+target_odds <- 30
+```
+
+## Target Points/Odds {auto-animate=true}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "9-12"
+
+# A loan that scores 600 points has 30:1 odds of being "good"
+
+# I.e., loans that score 600 points have a 97% probability of being "good",
+# and a 3% probability of being "bad"
+
+target_points <- 600
+target_odds <- 30
+
+# Every 50 points (+/-), the odds double (or halve):
+
+growth_points <- 50
+growth_rate <- 2
+```
+
+## Target Points/Odds {auto-animate=true}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "14-16"
+
+# A loan that scores 600 points has 30:1 odds of being "good"
+
+# I.e., loans that score 600 points have a 97% probability of being "good",
+# and a 3% probability of being "bad"
+
+target_points <- 600
+target_odds <- 30
+
+# Every 50 points (+/-), the odds double (or halve):
+
+growth_points <- 50
+growth_rate <- 2
+
+# Let's simulate a bunch of scores from 500 to 700 (by 25)
+
+scores <- seq.int(from = 500, to = 700, by = 25)
+```
+
+::: {.fragment}
+```{r}
+scores
+```
+:::
+
+## Target Points/Odds {auto-animate=true}
+
+```{.r code-line-numbers="1|2|3|4|5|6"}
+odds(
+  score = scores, 
+  tgt_points = target_points, 
+  tgt_odds = target_odds, 
+  pxo = growth_points, 
+  rate = growth_rate
+)
+```
+
+<br>
+
+```{r}
+odds_by_score <- odds(
+  score = scores, 
+  tgt_points = target_points, 
+  tgt_odds = target_odds, 
+  pxo = growth_points, 
+  rate = growth_rate
+)
+
+odds_tbl <- tibble::tibble(
+    score = scores,
+    odds = odds_by_score |> round(2)
+  )
+
+ojs_define(
+  odds_ojs = odds_tbl
+)
+```
+
+::: {.fragment}
+```{ojs}
+Inputs.table(transpose(odds_ojs))
+```
+:::
+
+## Target Points/Odds {.nostretch transition="none-out"}
+
+```{r}
+
+p <- odds_tbl |> 
+    ggplot2::ggplot(
+        ggplot2::aes(
+            x = scores,
+            y = odds
+        )
+    ) + 
+    ggplot2::geom_point() + 
+    ggplot2::geom_line() + 
+    ggplot2::labs(
+        x = "Score",
+        y = "Odds (bad:good, reduced to y:1)"
+    ) +
+    ggplot2::scale_y_continuous(
+        breaks = seq(0, 140, 20),
+        expand = c(0, 0), 
+        limits = c(0, 125)
+    ) + 
+    ggplot2::theme_minimal()
+
+p
+```
+
+## Target Points/Odds {.nostretch transition="none-in"}
+
+```{r}
+
+p + 
+  ggplot2::geom_segment(
+    ggplot2::aes(
+      x = 500,
+      xend = 600,
+      y = 30, 
+      yend = 30
+    ), 
+    linetype = "dashed",
+    color = "red"
+  ) + 
+  ggplot2::geom_segment(
+    ggplot2::aes(
+      x = 600,
+      xend = 600,
+      y = 0, 
+      yend = 30
+    ), 
+    linetype = "dashed",
+    color = "red"
+    )
+```
+
+## Target Points/Odds {.nostretch transition="none-in"}
+
+```{r}
+
+p + 
+  ggplot2::geom_segment(
+    ggplot2::aes(
+      x = 500,
+      xend = 650,
+      y = 60, 
+      yend = 60
+    ), 
+    linetype = "dashed",
+    color = "red"
+  ) + 
+  ggplot2::geom_segment(
+    ggplot2::aes(
+      x = 650,
+      xend = 650,
+      y = 0, 
+      yend = 60
+    ), 
+    linetype = "dashed",
+    color = "red"
+    )
+```
+
+## Target Points/Odds {.nostretch transition="none-in"}
+
+```{r}
+
+p + 
+  ggplot2::geom_segment(
+    ggplot2::aes(
+      x = 500,
+      xend = 700,
+      y = 120, 
+      yend = 120
+    ), 
+    linetype = "dashed",
+    color = "red"
+  ) + 
+  ggplot2::geom_segment(
+    ggplot2::aes(
+      x = 700,
+      xend = 700,
+      y = 0, 
+      yend = 120
+    ), 
+    linetype = "dashed",
+    color = "red"
+    )
+```
+
+## Target Points/Odds {.nostretch transition="none-in"}
+
+```{r}
+
+p + 
+  ggplot2::geom_segment(
+    ggplot2::aes(
+      x = 500,
+      xend = 550,
+      y = 15, 
+      yend = 15
+    ), 
+    linetype = "dashed",
+    color = "red"
+  ) + 
+  ggplot2::geom_segment(
+    ggplot2::aes(
+      x = 550,
+      xend = 550,
+      y = 0, 
+      yend = 15
+    ), 
+    linetype = "dashed",
+    color = "red"
+    )
+```
