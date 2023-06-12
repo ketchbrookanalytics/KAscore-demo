@@ -679,7 +679,7 @@ Imagine a new loan applicant comes through the door with the following character
 
 * Housing Status: *Own*
 
-* Industry: *Dairy*
+* Industry: *Poultry*
 :::
 
 ::: {.column width="35%"}
@@ -688,7 +688,7 @@ new_app <- tibble::tribble(
   ~variable, ~class,
   "collateral_type", "real estate",
   "housing_status", "own",
-  "industry", "dairy"
+  "industry", "poultry"
 )
 
 ojs_define(new_app_ojs = new_app)
@@ -715,7 +715,7 @@ Imagine a new loan applicant comes through the door with the following character
 
 * Housing Status: *Own*
 
-* Industry: *Dairy*
+* Industry: *Poultry*
 :::
 
 ::: {.column width="35%"}
@@ -748,7 +748,7 @@ Imagine a new loan applicant comes through the door with the following character
 
 * Housing Status: *Own*
 
-* Industry: *Dairy*
+* Industry: *Poultry*
 :::
 
 ::: {.column width="35%"}
@@ -771,3 +771,58 @@ Inputs.table(transpose(new_app_total_ojs))
 :::
 
 ::::
+
+## Score a New Loan Application {transition="none-out"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: 1|2|3-6
+
+applicant_odds <- odds(
+  score = 505, 
+  tgt_points = 600, 
+  tgt_odds = 30, 
+  pxo = 50, 
+  rate = 2
+)
+```
+
+## Score a New Loan Application {transition="none-in none-out"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: 9
+
+applicant_odds <- odds(
+  score = 505, 
+  tgt_points = 600, 
+  tgt_odds = 30, 
+  pxo = 50, 
+  rate = 2
+)
+
+paste0("Applicant's Odds: ", round(applicant_odds, 2), ":1") |> print()
+```
+
+## Score a New Loan Application {transition="none-in"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: 9-10
+
+applicant_odds <- odds(
+  score = 505, 
+  tgt_points = 600, 
+  tgt_odds = 30, 
+  pxo = 50, 
+  rate = 2
+)
+
+prob_good <- applicant_odds / (applicant_odds + 1)
+prob_bad <- 1 - prob_good
+
+paste0(
+  "Applicant's Probability of *Good*: ", round(prob_good, 3) * 100, "%\n",
+  "Applicant's Probability of *Bad*: ", round(prob_bad, 3) * 100, "%"
+) |> cat()
+```
