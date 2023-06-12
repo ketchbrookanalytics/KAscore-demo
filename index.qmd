@@ -122,9 +122,12 @@ ojs_define(
 )
 ```
 
+
+::: {.fragment}
 ```{ojs}
 Inputs.table(transpose(woe_ojs))
 ```
+:::
 
 ## Weight of Evidence
 
@@ -151,7 +154,11 @@ ojs_define(
     method = "add",
     verbose = FALSE
   ) |> 
-    dplyr::slice(3:8)
+    dplyr::slice(3L:8L) |> 
+    dplyr::bind_cols(
+      loans[3L:8L, "loan_id"]
+    ) |> 
+    dplyr::relocate(loan_id, .before = tidyselect::everything())
 )
 ```
 
@@ -184,7 +191,11 @@ ojs_define(
     method = "replace",
     verbose = FALSE
   ) |> 
-    dplyr::slice(3:8)
+    dplyr::slice(3L:8L) |> 
+    dplyr::bind_cols(
+      loans[3L:8L, "loan_id"]
+    ) |> 
+    dplyr::relocate(loan_id, .before = tidyselect::everything())
 )
 ```
 
@@ -228,13 +239,15 @@ ojs_define(
 )
 ```
 
+::: {.fragment}
 ```{ojs}
 Inputs.table(transpose(iv_ojs))
 ```
+:::
 
 ## Build a Scorecard
 
-```{.r code-line-numbers="4|5|6|7"}
+```{.r code-line-numbers="3|4|5|6|7"}
 # Create our training data
 
 train <- loans |> 
@@ -260,7 +273,13 @@ train <- loans |>
     verbose = FALSE
   )
 
-ojs_define(train_ojs = head(train, n = 100L))
+ojs_define(
+  train_ojs = head(train, n = 50L) |> 
+    dplyr::bind_cols(
+      loans[1L:50L, "loan_id"]
+    ) |> 
+    dplyr::relocate(loan_id, .before = tidyselect::everything())
+)
 ```
 
 ```{ojs}
@@ -279,8 +298,23 @@ fit <- glm(
   data = train, 
   family = "binomial"
 )
+```
 
-summary(fit)
+<br>
+
+```{r}
+params <- broom::tidy(fit) |> 
+  dplyr::mutate(
+    signif = dplyr::case_when(
+      p.value < 0.001 ~ "***",
+      p.value >= 0.001 & p.value < 0.01 ~ "**",
+      p.value >= 0.01 & p.value < 0.05 ~ "*", 
+      TRUE ~ ""
+    )
+  ) |> 
+  as.data.frame()
+
+params
 ```
 
 ## Target Points/Odds {auto-animate=true}
@@ -519,4 +553,205 @@ p +
     linetype = "dashed",
     color = "red"
     )
+```
+
+## Calculate the Points {auto-animate=true}
+
+1. Weight-of-Evidence values for each class in each independent variable
+2. Model intercept and coefficients for each independent variable
+3. Target points/odds and scaling quantity/rate
+
+## Calculate the Points {auto-animate=true transition="none-out"}
+
+1. Weight-of-Evidence values for each class in each independent variable
+
+```{r}
+# Build the scorecard base dictionary
+dict <- woe(
+  data = loans,
+  outcome = default_status,
+  predictors = c(collateral_type, housing_status, industry),
+  method = "dict",
+  verbose = FALSE
+) |>
+  dplyr::select(variable, class, woe)
+
+ojs_define(card_woe_ojs = dict)
+```
+
+```{ojs}
+Inputs.table(transpose(card_woe_ojs))
+```
+
+## Calculate the Points {transition="none-in"}
+
+2. Model intercept and coefficients for each independent variable
+
+```{r}
+# Extract the model's parameter estimates & intercept
+params <- fit$coefficients |>
+  tibble::as_tibble(rownames = NA) |>
+  tibble::rownames_to_column(var = "variable") |> 
+  dplyr::mutate(variable = stringr::str_replace(variable, "woe_", ""))
+
+dict <- dict |> 
+  dplyr::inner_join(params, by = "variable")
+
+ojs_define(card_coefs_ojs = dict |> dplyr::rename(coef = value))
+```
+
+```{ojs}
+Inputs.table(transpose(card_coefs_ojs))
+```
+
+## Calculate the Points {auto-animate=true}
+
+3. Target points/odds and scaling quantity/rate
+
+```{.r code-line-numbers="1-5|6|7|8|9|10-13"}
+# Add the points, creating the final scorecard
+
+dict |>
+  dplyr::mutate(
+    points = points(
+      woe = woe,
+      estimate = coef,
+      intercept = params$value[params$variable == "(Intercept)"],
+      num_vars = length(params$variable[params$variable != "(Intercept)"]),
+      tgt_points = 600,
+      tgt_odds = 30,
+      pxo = 50,
+      rate = 2
+    )
+  )
+```
+
+## Calculate the Points {auto-animate=true transition="none-out"}
+
+3. Target points/odds and scaling quantity/rate
+
+```{r}
+# Add the points, creating the final scorecard
+card <- dict |>
+  dplyr::mutate(
+    points = points(
+      woe = woe,
+      estimate = value,
+      intercept = params$value[params$variable == "(Intercept)"],
+      num_vars = length(params$variable[params$variable != "(Intercept)"]),
+      tgt_points = 600L,
+      tgt_odds = 30L,
+      pxo = 50L,
+      rate = 2L
+    )
+  )
+
+ojs_define(card_points_ojs = card |> dplyr::rename(coef = value))
+```
+
+```{ojs}
+Inputs.table(transpose(card_points_ojs))
+```
+
+## Calculate the Points {transition="none-in"}
+
+3. Target points/odds and scaling quantity/rate
+
+```{r}
+ojs_define(
+  card_points_ojs_2 = card |> 
+    dplyr::select(variable, class, points)
+)
+```
+
+```{ojs}
+Inputs.table(transpose(card_points_ojs_2))
+```
+
+## Score a New Loan Application {auto-animate=true}
+
+Imagine a new loan applicant comes through the door with the following characteristics:
+
+* Collateral Type: Real Estate
+* Housing Status: Own
+* Industry: Dairy
+
+::: {.fragment}
+```{r}
+#| echo: true
+#| code-line-numbers: 5|6|7
+
+# Simulate a new credit application
+
+new_app <- tibble::tribble(
+  ~variable, ~class,
+  "collateral_type", "real estate",
+  "housing_status", "own",
+  "industry", "dairy"
+)
+```
+:::
+
+## Score a New Loan Application {auto-animate=true}
+
+Imagine a new loan applicant comes through the door with the following characteristics:
+
+* Collateral Type: Real Estate
+* Housing Status: Own
+* Industry: Dairy
+
+```{r}
+ojs_define(new_app_ojs = new_app)
+```
+
+```{ojs}
+Inputs.table(transpose(new_app_ojs))
+```
+
+## Score a New Loan Application {auto-animate=true}
+
+Imagine a new loan applicant comes through the door with the following characteristics:
+
+* Collateral Type: Real Estate
+* Housing Status: Own
+* Industry: Dairy
+
+```{r}
+new_app_points <- new_app |> 
+  dplyr::inner_join(
+    card |> 
+      dplyr::select(variable, class, points), 
+    by = c("variable", "class")
+  )
+
+ojs_define(new_app_points_ojs = new_app_points)
+```
+
+```{ojs}
+Inputs.table(transpose(new_app_points_ojs))
+```
+
+## Score a New Loan Application {auto-animate=true}
+
+Imagine a new loan applicant comes through the door with the following characteristics:
+
+* Collateral Type: Real Estate
+* Housing Status: Own
+* Industry: Dairy
+
+```{r}
+new_app_total <- new_app_points |> 
+  dplyr::bind_rows(
+    tibble::tibble(
+      variable = "TOTAL",
+      class = "",
+      points = sum(new_app_points$points)
+    )
+  )
+
+ojs_define(new_app_total_ojs = new_app_total)
+```
+
+```{ojs}
+Inputs.table(transpose(new_app_total_ojs))
 ```
