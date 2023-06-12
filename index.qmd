@@ -668,54 +668,57 @@ ojs_define(
 Inputs.table(transpose(card_points_ojs_2))
 ```
 
-## Score a New Loan Application {auto-animate=true}
+## Score a New Loan Application {transition="none-out"}
 
 Imagine a new loan applicant comes through the door with the following characteristics:
 
-* Collateral Type: Real Estate
-* Housing Status: Own
-* Industry: Dairy
+:::: {.columns}
 
-::: {.fragment}
+::: {.column width="65%"}
+* Collateral Type: *Real Estate*
+
+* Housing Status: *Own*
+
+* Industry: *Dairy*
+:::
+
+::: {.column width="35%"}
 ```{r}
-#| echo: true
-#| code-line-numbers: 5|6|7
-
-# Simulate a new credit application
-
 new_app <- tibble::tribble(
   ~variable, ~class,
   "collateral_type", "real estate",
   "housing_status", "own",
   "industry", "dairy"
 )
-```
-:::
 
-## Score a New Loan Application {auto-animate=true}
-
-Imagine a new loan applicant comes through the door with the following characteristics:
-
-* Collateral Type: Real Estate
-* Housing Status: Own
-* Industry: Dairy
-
-```{r}
 ojs_define(new_app_ojs = new_app)
 ```
 
+::: {.fragment}
 ```{ojs}
 Inputs.table(transpose(new_app_ojs))
 ```
+:::
 
-## Score a New Loan Application {auto-animate=true}
+:::
+
+::::
+
+## Score a New Loan Application {transition="none-in none-out"}
 
 Imagine a new loan applicant comes through the door with the following characteristics:
 
-* Collateral Type: Real Estate
-* Housing Status: Own
-* Industry: Dairy
+:::: {.columns}
 
+::: {.column width="65%"}
+* Collateral Type: *Real Estate*
+
+* Housing Status: *Own*
+
+* Industry: *Dairy*
+:::
+
+::: {.column width="35%"}
 ```{r}
 new_app_points <- new_app |> 
   dplyr::inner_join(
@@ -730,15 +733,25 @@ ojs_define(new_app_points_ojs = new_app_points)
 ```{ojs}
 Inputs.table(transpose(new_app_points_ojs))
 ```
+:::
 
-## Score a New Loan Application {auto-animate=true}
+::::
+
+## Score a New Loan Application {transition="none-in"}
 
 Imagine a new loan applicant comes through the door with the following characteristics:
 
-* Collateral Type: Real Estate
-* Housing Status: Own
-* Industry: Dairy
+:::: {.columns}
 
+::: {.column width="65%"}
+* Collateral Type: *Real Estate*
+
+* Housing Status: *Own*
+
+* Industry: *Dairy*
+:::
+
+::: {.column width="35%"}
 ```{r}
 new_app_total <- new_app_points |> 
   dplyr::bind_rows(
@@ -755,3 +768,6 @@ ojs_define(new_app_total_ojs = new_app_total)
 ```{ojs}
 Inputs.table(transpose(new_app_total_ojs))
 ```
+:::
+
+::::
