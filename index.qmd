@@ -675,11 +675,11 @@ Imagine a new loan applicant comes through the door with the following character
 :::: {.columns}
 
 ::: {.column width="65%"}
-* Collateral Type: *Real Estate*
+- Collateral Type: *Real Estate*
 
-* Housing Status: *Own*
+- Housing Status: *Own*
 
-* Industry: *Poultry*
+- Industry: *Poultry*
 :::
 
 ::: {.column width="35%"}
@@ -711,11 +711,11 @@ Imagine a new loan applicant comes through the door with the following character
 :::: {.columns}
 
 ::: {.column width="65%"}
-* Collateral Type: *Real Estate*
+- Collateral Type: *Real Estate*
 
-* Housing Status: *Own*
+- Housing Status: *Own*
 
-* Industry: *Poultry*
+- Industry: *Poultry*
 :::
 
 ::: {.column width="35%"}
@@ -744,11 +744,11 @@ Imagine a new loan applicant comes through the door with the following character
 :::: {.columns}
 
 ::: {.column width="65%"}
-* Collateral Type: *Real Estate*
+- Collateral Type: *Real Estate*
 
-* Housing Status: *Own*
+- Housing Status: *Own*
 
-* Industry: *Poultry*
+- Industry: *Poultry*
 :::
 
 ::: {.column width="35%"}
@@ -826,3 +826,184 @@ paste0(
   "Applicant's Probability of *Bad*: ", round(prob_bad, 3) * 100, "%"
 ) |> cat()
 ```
+
+## Using {KAscore} to Validate PD Rating "Models"
+
+Scorecards & PD Rating Assignment Models
+
+::: {.fragment}
+![](www/not_so_different.gif)
+:::
+
+## Example PD Rating Model {.smaller}
+
+```{r}
+tibble::tribble(
+  ~Current_Ratio_Bin, ~Rating,
+  "[4.0, Inf)", 4L,
+  "[3.5, 4.0)", 5L,
+  "[3.0, 3.5)", 6L,
+  "[2.5, 3.0)", 7L,
+  "[2.0, 2.5)", 8L,
+  "[1.5, 2.0)", 9L,
+  "[1.0, 1.5)", 10L,
+  "[0.5, 1.0)", 11L,
+  "[0.0, 0.5)", 12L,
+  "[-0.5, 0.0)", 13L,
+  "[-0.5, -Inf)", 14L,
+) |> 
+  knitr::kable()
+```
+
+## Unique Aspects of PD Rating Models
+
+::: {.incremental}
+1. PD Ratings (1-14) introduce an *ordinal* variable, which are used as an attempt to rank-order probability of default (which is a *continuous* variable)
+2. Any continuous independent variables (e.g., Current Ratio) become binned, categorical variables representing unique intervals
+:::
+
+## Validating PD Rating Models
+
+How do we know that our bin breaks are correct/good?
+
+::: {.fragment}
+**{KAscore} can help**
+:::
+
+::: {.incremental}
+- Use `bin_quantile()` to easily bin continuous variables
+- Use `iv()` to evaluate predictiveness 
+:::
+
+## Binning with `bin_quantile()` {auto-animate=true}
+
+Supposed we have the following raw data (a data frame called `binning_data`):
+
+<br>
+
+```{r}
+set.seed(1234)
+binning_data <- KAscore::loans |> 
+  dplyr::mutate(
+    default_status = factor(default_status, levels = c("good", "bad")), 
+    current_ratio = dplyr::case_when(
+      
+      amount_of_existing_debt == levels(KAscore::loans$amount_of_existing_debt)[1] ~ 
+        sample(seq(2.5, 5.5, 0.1), size = nrow(KAscore::loans), replace = TRUE),
+      
+      amount_of_existing_debt == levels(KAscore::loans$amount_of_existing_debt)[2] ~
+        sample(seq(1.5, 3.5, 0.1), size = nrow(KAscore::loans), replace = TRUE),
+
+      amount_of_existing_debt == levels(KAscore::loans$amount_of_existing_debt)[3] ~
+        sample(seq(0.5, 2.5, 0.1), size = nrow(KAscore::loans), replace = TRUE),
+      
+      TRUE ~ sample(seq(-0.5, 1.2, 0.1), size = nrow(KAscore::loans), replace = TRUE)
+    )
+  ) |> 
+  dplyr::select(loan_id, current_ratio, default_status)
+
+ojs_define(binning_data_ojs = head(binning_data, n = 50L))
+```
+
+
+```{ojs}
+Inputs.table(transpose(binning_data_ojs))
+```
+
+## Binning with `bin_quantile()` {auto-animate=true}
+
+We can convert the continuous variable `current_ratio` to its binned, categorical equivalent using `bin_quantile()`
+
+:::: {.columns}
+
+::: {.column width="59%"}
+```{r}
+#| echo: true
+#| code-line-numbers: 3|4|5|6|10
+
+binned_data <- binning_data |> 
+  dplyr::mutate(
+    current_ratio_binned = bin_quantile(
+      x = binning_data$current_ratio, 
+      n_bins = 11,
+      decimals = 2
+    ))
+```
+:::
+
+```{r}
+ojs_define(
+  binned_data_ojs = head(binned_data, n = 6L) |> dplyr::select(-default_status)
+)
+```
+
+::: {.column width="41%"}
+
+::: {.fragment}
+```{ojs}
+Inputs.table(transpose(binned_data_ojs))
+```
+:::
+
+:::
+
+::::
+
+<br>
+
+::: {.fragment}
+```{r}
+#| echo: true
+
+# Show the unique bin breaks
+levels(binned_data$current_ratio_binned)
+```
+:::
+
+## Binning with `bin_quantile()` {auto-animate=true}
+
+We can think of this as a PD Card:
+
+```{r}
+#| echo: true
+
+# Show the number of observations in each bin
+
+data.frame(
+  Bin = levels(binned_data$current_ratio_binned),
+  PD_Rating = 14:4
+)
+```
+
+## Binning with `bin_quantile()` {auto-animate=true}
+
+We can then use `iv()` to evaluate this binned variable's predictiveness:
+
+```{r}
+#| message: false
+#| echo: true
+
+iv(
+  binned_data,
+  outcome = default_status,
+  predictors = current_ratio_binned, 
+  labels = TRUE
+)
+```
+
+::: {.notes}
+We actually developed a Shiny web application that allows you to create bins in a point-and-click way that calls `bin_quantile()` under the hood but allows you to manually override the bins and evaluate how the information value statistic changes -- it's a great way to test out a bunch of different possible bin breaks and see which one is the strongest in terms of predictiveness. Let's check it out!
+:::
+
+## Roadmap
+
+- Short-Term
+  + Improving code coverage
+  + Monitoring functions
+  + Auto-binning algorithm
+- Long-Term
+  + Functionality/documentation for other types of models
+  + Community-driven enhancements
+  
+## Feedback / Q&A
+  
