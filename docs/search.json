@@ -1,0 +1,282 @@
+[
+  {
+    "objectID": "kascore-demo.html#what-is-kascore",
+    "href": "kascore-demo.html#what-is-kascore",
+    "title": "{KAscore}",
+    "section": "What is {KAscore}?",
+    "text": "What is {KAscore}?\n\n\n\nR package that contains a suite of functions for developing & managing credit scorecard models\n{KAscore} Website"
+  },
+  {
+    "objectID": "kascore-demo.html#data-science-in-the-farm-credit-system",
+    "href": "kascore-demo.html#data-science-in-the-farm-credit-system",
+    "title": "{KAscore}",
+    "section": "Data Science in the Farm Credit System",
+    "text": "Data Science in the Farm Credit System\n\n\nModern tools call for modern solutions\nPlatform Software as a Service\nLet’s build together\n\n\n\n\nWhen I started at Farm Credit East back in 2017, the most cutting-edge analytics software available in the Farm Credit System were these giant Macro-enabled Excel workbooks\nand these Excel tools actually worked well for a lot of tasks that folks were doing years ago, mostly just descriptive analytics, and the only deliverables the analytics team was responsible for were static reports on a quarterly or annual basis\nbut the analytics function within Farm Credit has come a long way since then\nfolks are building credit risk models, some of which actually end up as part of a production process within the ACA, including scorecards\nopen source software (particular the R language) has evolved as the tool-of-choice for most analytics teams within the System for a number of reasons\nability to easily handle a lot more data than Excel\nreproducibility (I like to think of code as a “recipe”, and taking a code-first approach provides you with a “recipe” for your analysis; got new data in this month? Just apply the same “recipe” pointed at the new data)\nthe ecosystem of packages available for R is continuing to grow; from packages that just make it easier for you to transform and manipulate data to packages that are super-specific and – for example – help you easily develop a credit scorecard model; if you are working on writing R code to solve some specific use case, chances are that there’s an R package out there that will help\nAnd there are really two types of vendors out there that we see:\n\n\nVendors who offer these Excel workbooks to help Excel users with their work, and\nVendors who are offering proprietary software that becomes another platform that your team has to manage\n\n\nbut there’s nobody really meeting data analysts where they are – in the open source languages they work in everyday (R, Python, and SQL) – there’s no vendor helping them improve their quality of life and workflows within the tools they already use and are comfortable with – that’s the need that Ketchbrook is trying to serve\nWith that in mind, Ketchbrook Analytics is committed to building software that meets you where you are (R packages, Python packages for those using Python, Shiny web applications); software that allows you to do your job easier and lets you use the tooling that actually fits into your current workflow\nAt Ketchbrook, we have a really strong consulting practice that includes model development & validation services, among a bunch of other data science offerings\nBut we know that you have really brilliant analytics staff working within your ACAs that you have hired over the past few years, and you don’t need us to do everything\nAdditionally, a lot of the problems you are up against are problems that you’ve never encountered before at your ACA – CECL is a brand new initiative, what’s expected for stress testing today is way different than what we used to be able to get away with; so collaboration is KEY\nWe want to be part of that collaboration; we believe that we can be a valuable partner in building the software that’s going to solve these problems\nOne of my calls to action today is: “Let’s build together”\nWe want to hear from you about what we should build next (Should it be an entire CECL framework as an R package? What is going to make your life easier?)\nThis R package we are demo-ing today is hopefully a really great example of a need that existed (and continues to exist) in the System where we collaborated with a few of the ACAs who are on the call today to build software that is useful to you, in a way that is extensible to fit the nuances of however you need to implement or monitor your own credit scorecards"
+  },
+  {
+    "objectID": "kascore-demo.html#demo",
+    "href": "kascore-demo.html#demo",
+    "title": "{KAscore}",
+    "section": "Demo",
+    "text": "Demo\nlibrary(KAscore)\n\n# Check out the built-in `loans` dataset\n\nloans\n\n\nInputs.table(transpose(loans_ojs))\n\n\n\n\n\n\n\n\nOne thing that anyone who knows me well knows is that I really dislike slide deck presentations… We just want to build something that fits your use case and works really well and then show you how it works – so that’s exactly what we’re going to do next\nOnce you’ve installed {KAscore}, you can load it just like any other R package\nOne fun thing about the package is that it contains a dataset called loans that allows you to get started playing around with the package’s functions without even needing to bring in your own data\nEach observation in this table represents a unique loan, and notice that we have a bunch of loan attributes (which will serve as potential independent variables) and the default_status (which will serve as the dependent variable)\nThe actual dataset contains 1,000 rows, but we’ll just show the first few today for demo purposes"
+  },
+  {
+    "objectID": "kascore-demo.html#weight-of-evidence",
+    "href": "kascore-demo.html#weight-of-evidence",
+    "title": "{KAscore}",
+    "section": "Weight of Evidence",
+    "text": "Weight of Evidence\n# Calculate the Weight-of-Evidence values for the\n# \"collateral_type\" and \"housing_status\" variables\n\nwoe(\n  data = loans,\n  outcome = default_status,\n  predictors = c(collateral_type, housing_status)\n)\n\n\n\nInputs.table(transpose(woe_ojs))\n\n\n\n\n\n\n\n\n\nI promise we are going to get to showing you how to build a scorecard from start-to-finish, but in order to do that, we need to first set it up with a walkthrough of some of the specific functions & calculations involved\nIf you’ve never been involved in building a scorecard before, you might not be familiar with the concept of “Weight of Evidence”\nThis is a feature engineering technique that actually needs to take place prior to building your scorecard\nInstead of leaving your categorical predictor variables as they are, we transform them to their Weight-of-Evidence equivalents by calculating the distribution of “goods” in each class divided by the distribution of “bads” in that class (when I say “goods” and “bads”, I’m referring to the values in default_status, our dependent variable)\n{KAscore} has a function called woe() that can calculate these WoE values for us\n\nwoe()’s first argument is the data frame containing the independent & dependent variables; note that having the data as the first argument makes the function very pipe-friendly for those using {magrittr} or the new base pipe\nthe second argument outcome asks you to specify the dependent variable in the data frame\nand the predictors argument lets you list the different independent variables for which you want to calculate WoE values\nby default, our woe() function boils down the dataset into just the unique classes across the independent variables, and returns a “dictionary” of the unique Weight-of-Evidence values\n\nIt’s pretty easy to interpret WoE values:\n\npositive (and higher) WoE values indicate that there is a larger proportion of “goods” than “bads” in that class\nnegative (and lower) WoE values indicate that there is a larger proportion of “bads” than “goods” in that independent variable class"
+  },
+  {
+    "objectID": "kascore-demo.html#weight-of-evidence-1",
+    "href": "kascore-demo.html#weight-of-evidence-1",
+    "title": "{KAscore}",
+    "section": "Weight of Evidence",
+    "text": "Weight of Evidence\n# Instead of creating a \"dictionary\" of the unique WoE values,\n# add the WoE values to the original data frame\n\nwoe(\n  data = loans,\n  outcome = default_status,\n  predictors = c(collateral_type, housing_status),\n  method = \"add\"\n)\n\n\nInputs.table(transpose(woe_add_ojs))\n\n\n\n\n\n\n\n\nWe could instead specify method = \"add\", and woe() would preserve the structure of the original data frame and append the Weight-of-Evidence values as new columns"
+  },
+  {
+    "objectID": "kascore-demo.html#weight-of-evidence-2",
+    "href": "kascore-demo.html#weight-of-evidence-2",
+    "title": "{KAscore}",
+    "section": "Weight of Evidence",
+    "text": "Weight of Evidence\n# Or we can replace the original independent variables with\n# their WoE equivalents, via `method = \"replace\"`\n\nwoe(\n  data = loans,\n  outcome = default_status,\n  predictors = c(collateral_type, housing_status),\n  method = \"replace\"\n)\n\n\nInputs.table(transpose(woe_replace_ojs))\n\n\n\n\n\n\n\n\nOr, if we specify method = \"replace\", we can simply replace the independent variables we specified with their WoE equivalents"
+  },
+  {
+    "objectID": "kascore-demo.html#information-value",
+    "href": "kascore-demo.html#information-value",
+    "title": "{KAscore}",
+    "section": "Information Value",
+    "text": "Information Value\niv(\n    data = loans,\n    outcome = default_status,\n    predictors = c(\n      amount_of_existing_debt,\n      collateral_type,\n      housing_status,\n      industry,\n      years_at_current_address\n    )\n)\n\n\n\nInputs.table(transpose(iv_ojs))\n\n\n\n\n\n\n\n\n\nThe next function I want to demonstrate is called iv(), which is short for “information value”\nInformation Value is a useful by-product of Weight-of-Evidence transformation, and it can provide insight into the relative feature importance of each WOE-transformed independent variable towards your scorecard model\nThe arguments to iv() are very similar to the last function\n\nwe have to define our data, outcome, and which independent variables in the data we want to calculate the information value of (in this case, we’ll throw a bunch of the columns from our dataset at it)\n\nThe iv() function is going to return to you not only the information value statistic for each variable, but also the plain-English interpretation of each independent variables predictiveness\n\nThis is all based upon the literature in Siddiqi’s book\nYou may want to consider omitting any variables from your model that have an information value indicating they are “Likely overfit” or “Not predictive”\nEven better, you should be using information value in your model monitoring processes to track any changes to the predictiveness of the independent variables in your scorecard models – clearly {KAscore} can easily help you do that"
+  },
+  {
+    "objectID": "kascore-demo.html#build-a-scorecard",
+    "href": "kascore-demo.html#build-a-scorecard",
+    "title": "{KAscore}",
+    "section": "Build a Scorecard",
+    "text": "Build a Scorecard\n# Create our training data\n\ntrain &lt;- loans |&gt; \n  woe(\n    outcome = default_status,\n    predictors = c(collateral_type, housing_status, industry),\n    method = \"replace\"\n  )\n\n\nInputs.table(transpose(train_ojs))\n\n\n\n\n\n\n\n\nSo let’s actually build a scorecard model from start to finish!\nAs I said from the outset, the first thing we need is our dependent variable and whichever weight-of-evidence transformed indpendent variables we want to include in our model\nIf we look back at our information value output, it looks like “collateral type”, “housing status” and “industry” had some level of predictiveness that wouldn’t overfit the model\nSo we can pass those three columns to our woe() function, and by setting method = \"replace\", we can create a model training dataset that’s ready to be passed to an algorithm"
+  },
+  {
+    "objectID": "kascore-demo.html#build-a-scorecard-1",
+    "href": "kascore-demo.html#build-a-scorecard-1",
+    "title": "{KAscore}",
+    "section": "Build a Scorecard",
+    "text": "Build a Scorecard\n\n# Fit the logistic regression model\n\nfit &lt;- glm(\n  formula = default_status ~  ., \n  data = train, \n  family = \"binomial\"\n)\n\n\n\n\n                 term   estimate  std.error  statistic      p.value signif\n1         (Intercept) -0.8428400 0.07156796 -11.776778 5.142111e-32    ***\n2 woe_collateral_type -0.7583238 0.22596292  -3.355966 7.908839e-04    ***\n3  woe_housing_status -0.6740127 0.26206936  -2.571887 1.011460e-02      *\n4        woe_industry -0.9763714 0.17616949  -5.542227 2.986482e-08    ***\n\n\n\n\nLogistic regression is really the de facto algorithm that is used across all scorecard models, because the its interpretability of its output as odds ratios; and we’ll see shortly how odds is a major concept in bridging the gap between our logistic regression model and what we really are after – a points-based scorecard\nWe can take a look at some of the summary statistics around our model\n\nOne thing that might be interesting is that all of the coefficients are negative\nThis might seem strange at first, until you realize two things:\nFirst, this logistic regression model is looking at our dependent variable default_status and its going to output a probability of a loan being bad (not a probability of a good) – this is typical when building credit risk models, we want a model that outputs a probability of default (obviously we can just subract the probability from 1 to get the probability of good)\nWith that being said, remember that for the actual WoE values, positive values mean that there are more goods than bads in that class; so as you have a higher WoE value, when it gets multiplied by the coefficient we are looking at here, that’s going to lead to a lower model output value, or a lower probability of bad\nSo, if you have generally a lot more goods than bads in your training data, you should pretty much always be seeing negative coefficients in your logistic regression model\n\nLong story short, everything looks good here"
+  },
+  {
+    "objectID": "kascore-demo.html#target-pointsodds",
+    "href": "kascore-demo.html#target-pointsodds",
+    "title": "{KAscore}",
+    "section": "Target Points/Odds",
+    "text": "Target Points/Odds\n\n# A loan that scores 600 points has 30:1 odds of being \"good\"\n\n# I.e., loans that score 600 points have a 97% probability of being \"good\",\n# and a 3% probability of being \"bad\"\n\ntarget_points &lt;- 600\ntarget_odds &lt;- 30\n\n\n\nThere are a few managerial decisions that need to be made when developing a scorecard, and they’re all related to converting that logistic regression model to an eventual number of points; these decisions lay the roadmap for how we are going to do that\nThe first two things we need to specify are the baseline points & odds values, which we need to determine at the same time\nE.g., we can say that a score of 600 points would have 30:1 odds of being “good”\n\nsaid another way, for every 31 loans that score 600 points, we would expect 30 of them to turn out to be good (or pay back in full) and 1 of them to turn out to be bad (and default, for example)"
+  },
+  {
+    "objectID": "kascore-demo.html#target-pointsodds-1",
+    "href": "kascore-demo.html#target-pointsodds-1",
+    "title": "{KAscore}",
+    "section": "Target Points/Odds",
+    "text": "Target Points/Odds\n\n# A loan that scores 600 points has 30:1 odds of being \"good\"\n\n# I.e., loans that score 600 points have a 97% probability of being \"good\",\n# and a 3% probability of being \"bad\"\n\ntarget_points &lt;- 600\ntarget_odds &lt;- 30\n\n# Every 50 points (+/-), the odds double (or halve):\n\ngrowth_points &lt;- 50\ngrowth_rate &lt;- 2\n\n\n\nOnce we have our baseline established, we need to determine how the odds change as the number of points we assign changes\nIn this case, we can specify that every 50 points, the odds would double\n\nSo at a score of 650, we would expect odds of 60:1 (instead of 30:1)\nConversely, at a score of 550 (50 points the other way), we would expect odds of 15:1\n\nIf we wanted the odds to triple every 50 points, we could set our growth_rate to be 3 instead of 2"
+  },
+  {
+    "objectID": "kascore-demo.html#target-pointsodds-2",
+    "href": "kascore-demo.html#target-pointsodds-2",
+    "title": "{KAscore}",
+    "section": "Target Points/Odds",
+    "text": "Target Points/Odds\n\n# A loan that scores 600 points has 30:1 odds of being \"good\"\n\n# I.e., loans that score 600 points have a 97% probability of being \"good\",\n# and a 3% probability of being \"bad\"\n\ntarget_points &lt;- 600\ntarget_odds &lt;- 30\n\n# Every 50 points (+/-), the odds double (or halve):\n\ngrowth_points &lt;- 50\ngrowth_rate &lt;- 2\n\n# Let's simulate a bunch of scores from 500 to 700 (by 25)\n\nscores &lt;- seq.int(from = 500, to = 700, by = 25)\n\n\n\n\n[1] 500 525 550 575 600 625 650 675 700\n\n\n\n\n\nIt’s a lot easier to visualize this graphically, so let’s simulate a bunch of scores from 500 to 700 and take a look at the associated odds at each score and how the odds change exponentially, instead of linearly"
+  },
+  {
+    "objectID": "kascore-demo.html#target-pointsodds-3",
+    "href": "kascore-demo.html#target-pointsodds-3",
+    "title": "{KAscore}",
+    "section": "Target Points/Odds",
+    "text": "Target Points/Odds\nodds(\n  score = scores, \n  tgt_points = target_points,   # 600\n  tgt_odds = target_odds,   # 30\n  pxo = growth_points,   # 50\n  rate = growth_rate   # 2\n)\n\n\n\nInputs.table(transpose(odds_ojs))\n\n\n\n\n\n\n\n\n\nConveniently, {KAscore} has a function called odds() that will calculate these associated odds for you, given a vector of scores (which we just created), your baseline points & odds (which we specified earlier as target_points and target_odds), and then our scaling facotrs we defined in growth_points and growth_rate\nThis function is going to return the associated odds at each score that we passed it\nIt’s probably worth plotting the data in this table though to understand how the relationship changes as the score increases/decreases"
+  },
+  {
+    "objectID": "kascore-demo.html#target-pointsodds-4",
+    "href": "kascore-demo.html#target-pointsodds-4",
+    "title": "{KAscore}",
+    "section": "Target Points/Odds",
+    "text": "Target Points/Odds\n\n\n\n\n\n\n\nHere’s that same data, just plotted on a chart with the score on the x-axis and the associated odds on the y-axis\nWe can clearly see that the relationship is not linear, its exponential"
+  },
+  {
+    "objectID": "kascore-demo.html#target-pointsodds-5",
+    "href": "kascore-demo.html#target-pointsodds-5",
+    "title": "{KAscore}",
+    "section": "Target Points/Odds",
+    "text": "Target Points/Odds\n\n\n\n\n\n\n\nAs we specified, a score of 600 has 30:1 odds"
+  },
+  {
+    "objectID": "kascore-demo.html#target-pointsodds-6",
+    "href": "kascore-demo.html#target-pointsodds-6",
+    "title": "{KAscore}",
+    "section": "Target Points/Odds",
+    "text": "Target Points/Odds\n\n\n\n\n\n\n\nA score of 650 has 60:1 odds (for every 61 loans that score a 650, we expect 60 to be good and 1 to be bad)"
+  },
+  {
+    "objectID": "kascore-demo.html#target-pointsodds-7",
+    "href": "kascore-demo.html#target-pointsodds-7",
+    "title": "{KAscore}",
+    "section": "Target Points/Odds",
+    "text": "Target Points/Odds\n\n\n\n\n\n\n\nA score of 700 has 120:1 odds"
+  },
+  {
+    "objectID": "kascore-demo.html#target-pointsodds-8",
+    "href": "kascore-demo.html#target-pointsodds-8",
+    "title": "{KAscore}",
+    "section": "Target Points/Odds",
+    "text": "Target Points/Odds\n\n\n\n\n\n\n\nAnd a score of 550 has 15:1 odds\nSo we think that odds() function is really convenient for showcasing the relationship between scores and odds, enabling you to have those conversations with management about your scorecard before you have to decide on the number of target points, odds, and scaling factors you want to use in your own scorecard"
+  },
+  {
+    "objectID": "kascore-demo.html#calculate-the-points",
+    "href": "kascore-demo.html#calculate-the-points",
+    "title": "{KAscore}",
+    "section": "Calculate the Points",
+    "text": "Calculate the Points\n\nWeight-of-Evidence values for each class in each independent variable\nModel intercept and coefficients for each independent variable\nTarget points/odds and scaling quantity/rate\n\n\n\nNow, to actually build our scorecard, we are going to need all of the things we just talked about"
+  },
+  {
+    "objectID": "kascore-demo.html#calculate-the-points-1",
+    "href": "kascore-demo.html#calculate-the-points-1",
+    "title": "{KAscore}",
+    "section": "Calculate the Points",
+    "text": "Calculate the Points\n\nWeight-of-Evidence values for each class in each independent variable\n\n\nInputs.table(transpose(card_woe_ojs))\n\n\n\n\n\n\n\n\nLet’s start with our weight-of-evidence dictionary"
+  },
+  {
+    "objectID": "kascore-demo.html#calculate-the-points-2",
+    "href": "kascore-demo.html#calculate-the-points-2",
+    "title": "{KAscore}",
+    "section": "Calculate the Points",
+    "text": "Calculate the Points\n\nModel intercept and coefficients for each independent variable\n\n\nInputs.table(transpose(card_coefs_ojs))\n\n\n\n\n\n\n\n\nThen we join in the model coefficients for each variable in the table"
+  },
+  {
+    "objectID": "kascore-demo.html#calculate-the-points-3",
+    "href": "kascore-demo.html#calculate-the-points-3",
+    "title": "{KAscore}",
+    "section": "Calculate the Points",
+    "text": "Calculate the Points\n\nTarget points/odds and scaling quantity/rate\n\n# Add the points, creating the final scorecard\n\ndict |&gt;\n  dplyr::mutate(\n    points = points(\n      woe = woe,\n      estimate = coef,\n      intercept = params$value[params$variable == \"(Intercept)\"],\n      num_vars = length(params$variable[params$variable != \"(Intercept)\"]),\n      tgt_points = 600,\n      tgt_odds = 30,\n      pxo = 50,\n      rate = 2\n    )\n  )\n\n\nLastly, we can use the points() function from {KAscore} to calculate the number of points each class gets; points() takes the following arguments\nthe column containing the WoE values\nthe column containing the model coefficients\nthe model intercept, which we can lookup from our model summary statistics table\nthe number of independent variables in our model, which we can also lookup from our model summary statistics table\nthe baseline target number of points we want for our scorecard\nthe baseline odds that the target points get\nand the number of points (50) to double the odds"
+  },
+  {
+    "objectID": "kascore-demo.html#calculate-the-points-4",
+    "href": "kascore-demo.html#calculate-the-points-4",
+    "title": "{KAscore}",
+    "section": "Calculate the Points",
+    "text": "Calculate the Points\n\nTarget points/odds and scaling quantity/rate\n\n\nInputs.table(transpose(card_points_ojs))\n\n\n\n\n\n\n\n\nAnd that’s it! Now we have the number of points for each class of each independent variable!\nAnd when we go to hand this off to others, we can probably strip away the woe and coef columns so that we just have…"
+  },
+  {
+    "objectID": "kascore-demo.html#calculate-the-points-5",
+    "href": "kascore-demo.html#calculate-the-points-5",
+    "title": "{KAscore}",
+    "section": "Calculate the Points",
+    "text": "Calculate the Points\n\nTarget points/odds and scaling quantity/rate\n\n\nInputs.table(transpose(card_points_ojs_2))"
+  },
+  {
+    "objectID": "kascore-demo.html#score-a-new-loan-application",
+    "href": "kascore-demo.html#score-a-new-loan-application",
+    "title": "{KAscore}",
+    "section": "Score a New Loan Application",
+    "text": "Score a New Loan Application\nImagine a new loan applicant comes through the door with the following characteristics:\n\n\n\nCollateral Type: Real Estate\nHousing Status: Own\nIndustry: Poultry\n\n\n\n\nInputs.table(transpose(new_app_ojs))\n\n\n\n\n\n\n\n\n\n\n\nWe can put this information into a table"
+  },
+  {
+    "objectID": "kascore-demo.html#score-a-new-loan-application-1",
+    "href": "kascore-demo.html#score-a-new-loan-application-1",
+    "title": "{KAscore}",
+    "section": "Score a New Loan Application",
+    "text": "Score a New Loan Application\nImagine a new loan applicant comes through the door with the following characteristics:\n\n\n\nCollateral Type: Real Estate\nHousing Status: Own\nIndustry: Poultry\n\n\n\nInputs.table(transpose(new_app_points_ojs))\n\n\n\n\n\n\n\n\n\n\nAnd then, using our scorecard, we can lookup the number of points they get for each attribute"
+  },
+  {
+    "objectID": "kascore-demo.html#score-a-new-loan-application-2",
+    "href": "kascore-demo.html#score-a-new-loan-application-2",
+    "title": "{KAscore}",
+    "section": "Score a New Loan Application",
+    "text": "Score a New Loan Application\nImagine a new loan applicant comes through the door with the following characteristics:\n\n\n\nCollateral Type: Real Estate\nHousing Status: Own\nIndustry: Poultry\n\n\n\nInputs.table(transpose(new_app_total_ojs))\n\n\n\n\n\n\n\n\n\n\nIf we sum it all up, we can see that this new applicant’s total scorecard score would be 505"
+  },
+  {
+    "objectID": "kascore-demo.html#score-a-new-loan-application-3",
+    "href": "kascore-demo.html#score-a-new-loan-application-3",
+    "title": "{KAscore}",
+    "section": "Score a New Loan Application",
+    "text": "Score a New Loan Application\n\napplicant_odds &lt;- odds(\n  score = 505, \n  tgt_points = 600, \n  tgt_odds = 30, \n  pxo = 50, \n  rate = 2\n)\n\n\n\nFrom a quantitative perspective we might be interested in seeing what this applicant’s odds of being a good loan candidate are; we can go back to our odds function, plug in their score to the score argument, and pass the baseline criteria to the other arguments"
+  },
+  {
+    "objectID": "kascore-demo.html#score-a-new-loan-application-4",
+    "href": "kascore-demo.html#score-a-new-loan-application-4",
+    "title": "{KAscore}",
+    "section": "Score a New Loan Application",
+    "text": "Score a New Loan Application\n\napplicant_odds &lt;- odds(\n  score = 505, \n  tgt_points = 600, \n  tgt_odds = 30, \n  pxo = 50, \n  rate = 2\n)\n\npaste0(\"Applicant's Odds: \", round(applicant_odds, 2), \":1\") |&gt; print()\n\n[1] \"Applicant's Odds: 8.04:1\"\n\n\n\n\nThis applicant has a little over 8:1 odds of being a good loan"
+  },
+  {
+    "objectID": "kascore-demo.html#score-a-new-loan-application-5",
+    "href": "kascore-demo.html#score-a-new-loan-application-5",
+    "title": "{KAscore}",
+    "section": "Score a New Loan Application",
+    "text": "Score a New Loan Application\n\napplicant_odds &lt;- odds(\n  score = 505, \n  tgt_points = 600, \n  tgt_odds = 30, \n  pxo = 50, \n  rate = 2\n)\n\nprob_good &lt;- applicant_odds / (applicant_odds + 1)\nprob_bad &lt;- 1 - prob_good\n\npaste0(\n  \"Applicant's Probability of *Good*: \", round(prob_good, 3) * 100, \"%\\n\",\n  \"Applicant's Probability of *Bad*: \", round(prob_bad, 3) * 100, \"%\"\n) |&gt; cat()\n\nApplicant's Probability of *Good*: 88.9%\nApplicant's Probability of *Bad*: 11.1%\n\n\n\n\nI’m not a huge fan of reporting odds, so if we prefer to express that as a probability, then its a pretty easy calculation to tell us that 8:1 odds is about 11% probability of being bad (and obviously then an 89% probability of being good)"
+  },
+  {
+    "objectID": "kascore-demo.html#using-kascore-to-validate-pd-rating-models",
+    "href": "kascore-demo.html#using-kascore-to-validate-pd-rating-models",
+    "title": "{KAscore}",
+    "section": "Using {KAscore} to Validate PD Rating “Models”",
+    "text": "Using {KAscore} to Validate PD Rating “Models”\nScorecards & PD Rating Assignment Models\n\n\n\n\n\nOne interesting thing is how prevelant card-based “models” are in the Farm Credit System; and once we built this package and ACAs started using it, we realized that there are a lot more uses for its functionality than we initially even anticipated\nOne of those uses is for the purposes of validating PD Rating assignment “models” (and we’ll use “models” liberally here, because most of these are not quantitatively defined)"
+  },
+  {
+    "objectID": "kascore-demo.html#example-pd-rating-model",
+    "href": "kascore-demo.html#example-pd-rating-model",
+    "title": "{KAscore}",
+    "section": "Example PD Rating Model",
+    "text": "Example PD Rating Model\n\n\n\n\n\nCurrent_Ratio_Bin\nRating\n\n\n\n\n[4.0, Inf)\n4\n\n\n[3.5, 4.0)\n5\n\n\n[3.0, 3.5)\n6\n\n\n[2.5, 3.0)\n7\n\n\n[2.0, 2.5)\n8\n\n\n[1.5, 2.0)\n9\n\n\n[1.0, 1.5)\n10\n\n\n[0.5, 1.0)\n11\n\n\n[0.0, 0.5)\n12\n\n\n[-0.5, 0.0)\n13\n\n\n[-0.5, -Inf)\n14\n\n\n\n\n\n\n\nAnd we know that a PD Rating models is simply a lookup table, like the one above for current ratio\nIf the applicant’s current ratio is greater than 4.0, they get a 4 PD Rating, if it’s between 3.5 and 4.0, they get a 5 PD Rating, and so on (typically up to 14)"
+  },
+  {
+    "objectID": "kascore-demo.html#unique-aspects-of-pd-rating-models",
+    "href": "kascore-demo.html#unique-aspects-of-pd-rating-models",
+    "title": "{KAscore}",
+    "section": "Unique Aspects of PD Rating Models",
+    "text": "Unique Aspects of PD Rating Models\n\n\nPD Ratings (1-14) introduce an ordinal variable, which are used as an attempt to rank-order probability of default (which is a continuous variable)\nAny continuous independent variables (e.g., Current Ratio) become binned, categorical variables representing unique intervals"
+  },
+  {
+    "objectID": "kascore-demo.html#validating-pd-rating-models",
+    "href": "kascore-demo.html#validating-pd-rating-models",
+    "title": "{KAscore}",
+    "section": "Validating PD Rating Models",
+    "text": "Validating PD Rating Models\nHow do we know that our bin breaks are correct/good?\n\n{KAscore} can help\n\n\n\nUse bin_quantile() to easily bin continuous variables\nUse iv() to evaluate predictiveness"
+  },
+  {
+    "objectID": "kascore-demo.html#binning-with-bin_quantile",
+    "href": "kascore-demo.html#binning-with-bin_quantile",
+    "title": "{KAscore}",
+    "section": "Binning with bin_quantile()",
+    "text": "Binning with bin_quantile()\nSupposed we have the following raw data (a data frame called binning_data):\n\n\nInputs.table(transpose(binning_data_ojs))"
+  },
+  {
+    "objectID": "kascore-demo.html#binning-with-bin_quantile-1",
+    "href": "kascore-demo.html#binning-with-bin_quantile-1",
+    "title": "{KAscore}",
+    "section": "Binning with bin_quantile()",
+    "text": "Binning with bin_quantile()\nWe can convert the continuous variable current_ratio to its binned, categorical equivalent using bin_quantile()\n\n\n\nbinned_data &lt;- binning_data |&gt; \n  dplyr::mutate(\n    current_ratio_binned = bin_quantile(\n      x = binning_data$current_ratio, \n      n_bins = 11,\n      decimals = 2\n    ))\n\n\n\n\nInputs.table(transpose(binned_data_ojs))\n\n\n\n\n\n\n\n\n\n\n\n\n# Show the unique bin breaks\nlevels(binned_data$current_ratio_binned)\n\n [1] \"[-Inf,0]\"   \"(0,0.6]\"    \"(0.6,0.9]\"  \"(0.9,1.2]\"  \"(1.2,1.8]\" \n [6] \"(1.8,2.4]\"  \"(2.4,2.9]\"  \"(2.9,3.4]\"  \"(3.4,4.1]\"  \"(4.1,4.8]\" \n[11] \"(4.8, Inf]\""
+  },
+  {
+    "objectID": "kascore-demo.html#binning-with-bin_quantile-2",
+    "href": "kascore-demo.html#binning-with-bin_quantile-2",
+    "title": "{KAscore}",
+    "section": "Binning with bin_quantile()",
+    "text": "Binning with bin_quantile()\nWe can think of this as a PD Card:\n\n# Show the number of observations in each bin\n\ndata.frame(\n  Bin = levels(binned_data$current_ratio_binned),\n  PD_Rating = 14:4\n)\n\n          Bin PD_Rating\n1    [-Inf,0]        14\n2     (0,0.6]        13\n3   (0.6,0.9]        12\n4   (0.9,1.2]        11\n5   (1.2,1.8]        10\n6   (1.8,2.4]         9\n7   (2.4,2.9]         8\n8   (2.9,3.4]         7\n9   (3.4,4.1]         6\n10  (4.1,4.8]         5\n11 (4.8, Inf]         4"
+  },
+  {
+    "objectID": "kascore-demo.html#binning-with-bin_quantile-3",
+    "href": "kascore-demo.html#binning-with-bin_quantile-3",
+    "title": "{KAscore}",
+    "section": "Binning with bin_quantile()",
+    "text": "Binning with bin_quantile()\nWe can then use iv() to evaluate this binned variable’s predictiveness:\n\niv(\n  binned_data,\n  outcome = default_status,\n  predictors = current_ratio_binned, \n  labels = TRUE\n)\n\n# A tibble: 1 × 3\n  variable                iv label         \n  &lt;chr&gt;                &lt;dbl&gt; &lt;chr&gt;         \n1 current_ratio_binned 0.576 Likely overfit\n\n\n\nWe actually developed a Shiny web application that allows you to create bins in a point-and-click way that calls bin_quantile() under the hood but allows you to manually override the bins and evaluate how the information value statistic changes – it’s a great way to test out a bunch of different possible bin breaks and see which one is the strongest in terms of predictiveness. Let’s check it out!"
+  },
+  {
+    "objectID": "kascore-demo.html#roadmap",
+    "href": "kascore-demo.html#roadmap",
+    "title": "{KAscore}",
+    "section": "Roadmap",
+    "text": "Roadmap\n\nEnhancements & Community Calls\nShort-Term\n\nMonitoring functions\nDeployment examples (Docker)\nAuto-binning algorithm\n\nLong-Term\n\nFunctionality/documentation for other types of models\nCommunity-driven enhancements\n\n\n\n\nThose of you on the call who already license the package know that we provide a minimum of four releases of {KAscore} each year, which include bug fixes, enhancements to functionality, and improvements to documentation\nIn terms of what’s to come…\n\nwe want to add functionality to make it easy to monitor your scorecard models\nwe will be adding documentation & examples for deploying scorecards into a production environment with Docker & Azure (or any other cloud provider if there are ACAs on this call using AWS or Google Cloud)\nprovide an algorithm for automatically binning continuous variables into the most optimal bins (which is tricky because it includes determining the optimal number of bins, and the optimal cutoff points)\n\nI want to highlight one thing though… it doesn’t make sense for us to incorporate functions that already exist into {KAscore}… I’m thinking of calculating model accuracy statistics for monitoring purposes – the {yardstick} package already does an amazing job of doing this in just a few lines of code – there’s no real way that we could make it better, and we don’t want to add a million dependencies to {KAscore} that would make it take 10 minutes to install\n\nwhat we will do though, is provide documentation in the form of articles and code that show you exactly how to do these things, even if they incorporate packages other than {KAscore}\n\nIn the longer term, we want to add the ability to use algorithms other than logistic regression for creating scorecards; it’s an area where there’s not a whole lot of research or scholarly papers available, so we want to take the time to do that research correctly and ensure that we are able to continue to output statistically robust scorecards using more modern binary classification algorithms like XGBoost or Random Forests\nLastly, we want these enhancements to be driven by the users of the {KAscore} package – you really have to be hands-on using the package in order to have those “aha!” moments and say, “It would be really useful to have this feature or that feature”"
+  },
+  {
+    "objectID": "kascore-demo.html#feedback-qa-contact",
+    "href": "kascore-demo.html#feedback-qa-contact",
+    "title": "{KAscore}",
+    "section": "Feedback / Q&A / Contact",
+    "text": "Feedback / Q&A / Contact\n\nketchbrook.com\n\ninfo@ketchbrookanalytics.com"
+  }
+]
